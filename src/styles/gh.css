@@ -1,0 +1,124 @@
+/* Grand Hill — component styles used by the back office.
+   Same classes and values as the design system's bundle.css (gh- prefix). */
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Layout ---------- */
+.gh-container { max-width: calc(var(--container-max) + 2 * var(--page-margin)); margin: 0 auto; padding: 0 var(--page-margin); }
+.gh-inverse { background: var(--surface-inverse); color: var(--ink-inverse); }
+@media (max-width: 1024px) { .gh-container { padding: 0 32px; } }
+@media (max-width: 768px)  { .gh-container { padding: 0 20px; } }
+
+/* ---------- Type ---------- */
+.gh-h1, .gh-h2, .gh-h3, .gh-h4 { font-family: var(--font-display); margin: 0; color: inherit; }
+.gh-h1 { font-size: 64px; line-height: 1.05; font-weight: 300; letter-spacing: -0.03em; }
+.gh-h2 { font-size: 44px; line-height: 1.1; font-weight: 300; letter-spacing: -0.025em; }
+.gh-h3 { font-size: 28px; line-height: 1.2; font-weight: 400; letter-spacing: -0.02em; }
+.gh-body-lg { font-size: 19px; line-height: 1.6; }
+.gh-small { font-size: 14px; line-height: 1.5; }
+.gh-muted { color: var(--ink-muted); }
+.gh-eyebrow, .gh-label {
+  font-family: var(--font-sans); font-size: 12px; line-height: 1.4; font-weight: 600;
+  letter-spacing: 0.18em; text-transform: uppercase; margin: 0;
+}
+.gh-label { color: var(--ink-muted); }
+.gh-inverse .gh-label { color: var(--ink-inverse-muted); }
+@media (max-width: 768px) {
+  .gh-h1 { font-size: 40px; line-height: 1.08; letter-spacing: -0.025em; }
+  .gh-h2 { font-size: 32px; letter-spacing: -0.02em; }
+  .gh-h3 { font-size: 24px; }
+  .gh-body-lg { font-size: 17px; }
+}
+
+.gh-eyebrow { display: inline-flex; align-items: center; gap: 12px; color: var(--accent-text); }
+.gh-eyebrow::before { content: ""; width: 24px; height: var(--stroke-rule); background: var(--accent); flex: none; }
+.gh-inverse .gh-eyebrow { color: var(--accent-text-inverse); }
+
+/* ---------- Wordmark (placeholder until the final logo) ---------- */
+.gh-wordmark {
+  font-family: var(--font-display); font-weight: 500; font-size: 18px; line-height: 1;
+  letter-spacing: 0.28em; text-transform: uppercase; color: var(--ink);
+  text-decoration: none; white-space: nowrap; margin-right: -0.28em;
+}
+.gh-inverse .gh-wordmark { color: var(--ink-inverse); }
+
+/* ---------- Focus ---------- */
+.gh a:focus-visible, .gh button:focus-visible, .gh-btn:focus-visible, .gh-link:focus-visible {
+  outline: var(--stroke-rule) solid var(--focus); outline-offset: 3px;
+}
+.gh-inverse :focus-visible { outline-color: var(--focus-inverse) !important; }
+
+/* ---------- Buttons ---------- */
+.gh-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+  height: 52px; padding: 0 28px; border: var(--stroke-hairline) solid transparent; border-radius: var(--radius-none);
+  font-family: var(--font-sans); font-size: 13px; line-height: 1; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+.gh-btn-sm { height: 44px; padding: 0 20px; }
+.gh-btn-block { width: 100%; }
+.gh-btn-primary { background: var(--accent); color: var(--on-accent); }
+.gh-btn-primary:hover { background: var(--accent-hover); }
+.gh-btn-secondary { background: transparent; color: var(--ink); border-color: var(--ink); }
+.gh-btn-secondary:hover { background: var(--ink); color: var(--surface); }
+.gh-btn[disabled] { background: var(--line); color: var(--ink-muted); border-color: transparent; cursor: not-allowed; }
+
+/* Text link: 2px crimson underline */
+.gh-link {
+  display: inline-flex; align-items: center; padding-bottom: 6px;
+  border: 0; border-bottom: var(--stroke-rule) solid var(--accent); background: none; cursor: pointer;
+  font-family: var(--font-sans); font-size: 13px; line-height: 1; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink); text-decoration: none;
+}
+
+/* ---------- Header ---------- */
+.gh-header { padding: 16px 0; }
+.gh-header-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+  height: var(--header-height); padding: 0 var(--space-3);
+  border: var(--stroke-hairline) solid var(--line); background: var(--surface);
+}
+.gh-header-actions { display: flex; align-items: center; gap: var(--space-3); }
+@media (max-width: 640px) {
+  .gh-header-bar { height: 64px; padding: 0 var(--space-2); }
+  .gh-header-actions .gh-small { display: none; }
+}
+
+/* ---------- Form ---------- */
+.gh-form { display: grid; gap: var(--space-3); }
+.gh-field { display: flex; flex-direction: column; gap: var(--space-1); }
+.gh-field-label { font-family: var(--font-sans); font-size: 12px; line-height: 1.4; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); }
+.gh-input {
+  width: 100%; height: 52px; padding: 0 var(--space-2); border: var(--stroke-hairline) solid var(--line-strong); border-radius: var(--radius-none);
+  background: var(--surface); color: var(--ink); font-family: var(--font-sans); font-size: 15px; font-weight: 400;
+  appearance: none; -webkit-appearance: none; transition: border-color .15s ease;
+}
+.gh-input::placeholder { color: var(--ink-muted); }
+.gh-input:hover { border-color: var(--ink); }
+.gh-input:focus { outline: var(--stroke-rule) solid var(--focus); outline-offset: 2px; border-color: var(--ink); }
+.gh-field.is-error .gh-input { border-color: var(--danger); border-width: 2px; padding-left: 15px; }
+.gh-help, .gh-error, .gh-ok { font-size: 13px; line-height: 1.4; margin: 0; display: flex; gap: 6px; align-items: flex-start; }
+.gh-help { color: var(--ink-muted); }
+.gh-error { color: var(--danger); font-weight: 500; }
+.gh-ok { color: var(--success); font-weight: 500; }
+.gh-error svg, .gh-ok svg { width: 16px; height: 16px; flex: none; stroke: currentColor; stroke-width: 1.5; fill: none; margin-top: 1px; }
+
+/* Message block (form-level error / confirmation) */
+.gh-notice { display: flex; gap: var(--space-2); align-items: flex-start; padding: var(--space-2) var(--space-3); border: var(--stroke-hairline) solid var(--line); background: var(--surface); }
+.gh-notice svg { width: 20px; height: 20px; flex: none; stroke-width: 1.5; fill: none; margin-top: 2px; }
+.gh-notice p { margin: 0; font-size: 15px; line-height: 1.5; }
+.gh-notice.is-error svg { stroke: var(--danger); }
+.gh-notice.is-error { border-color: var(--danger); }
+.gh-notice.is-success svg { stroke: var(--success); }
+.gh-notice.is-success { border-color: var(--success); }
