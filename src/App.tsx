@@ -7,7 +7,10 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Portal from "./pages/Portal";
 import ResetPassword from "./pages/ResetPassword";
-import { Bids, Clients, Projects, Subcontractors } from "./pages/Sections";
+import { Bids, Clients, Projects } from "./pages/Sections";
+import SubcontractorDetail from "./pages/subcontractors/SubcontractorDetail";
+import SubcontractorForm from "./pages/subcontractors/SubcontractorForm";
+import SubcontractorList from "./pages/subcontractors/SubcontractorList";
 import Team from "./pages/Team";
 
 function Home() {
@@ -31,7 +34,10 @@ export default function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/bids" element={<Bids />} />
                 <Route path="/clientes" element={<Clients />} />
-                <Route path="/subcontratistas" element={<Subcontractors />} />
+                <Route path="/subcontratistas" element={<SubcontractorList />} />
+                <Route path="/subcontratistas/nuevo" element={<SubcontractorForm />} />
+                <Route path="/subcontratistas/:id" element={<SubcontractorDetail />} />
+                <Route path="/subcontratistas/:id/editar" element={<SubcontractorForm />} />
                 <Route path="/proyectos" element={<Projects />} />
               </Route>
 
