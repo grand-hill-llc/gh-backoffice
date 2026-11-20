@@ -4,6 +4,9 @@ import { useAuth } from "../auth/AuthProvider";
 import { Splash } from "../auth/RequireAuth";
 import { supabase } from "../lib/supabase";
 import { AlertCircleIcon } from "./Icons";
+import { Logo } from "../components/ui";
+import { useT } from "../i18n";
+import { LangSwitch } from "../components/PrefsControls";
 
 const MIN_LENGTH = 10;
 
@@ -12,6 +15,7 @@ const MIN_LENGTH = 10;
 export default function ResetPassword() {
   const { session, loading } = useAuth();
   const navigate = useNavigate();
+  const t = useT();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -23,18 +27,18 @@ export default function ResetPassword() {
     e.preventDefault();
     setError(null);
     if (password.length < MIN_LENGTH) {
-      setError(`La contraseña debe tener al menos ${MIN_LENGTH} caracteres.`);
+      setError(t.auth.tooShort(MIN_LENGTH));
       return;
     }
     if (password !== confirm) {
-      setError("Las contraseñas no coinciden.");
+      setError(t.auth.mismatch);
       return;
     }
     setBusy(true);
     const { error: err } = await supabase.auth.updateUser({ password });
     setBusy(false);
     if (err) {
-      setError("No pudimos guardar la contraseña. Solicita un enlace nuevo e inténtalo otra vez.");
+      setError(t.auth.savePasswordFailed);
       return;
     }
     navigate("/dashboard", { replace: true });
@@ -43,35 +47,36 @@ export default function ResetPassword() {
   return (
     <main className="login gh">
       <section className="login-brand gh-inverse" aria-hidden="true">
-        <span className="gh-wordmark">Grand Hill</span>
+        <Logo surface="inverse" height={40} />
         <div className="login-brand-copy">
-          <p className="gh-eyebrow">Back Office</p>
-          <h2 className="gh-h2">Proyectos, subcontratistas y cotizaciones en un solo lugar</h2>
+          <p className="gh-eyebrow">{t.common.backOffice}</p>
+          <h2 className="gh-h2">{t.auth.brandHeadline}</h2>
         </div>
       </section>
 
       <section className="login-panel">
+        <LangSwitch className="login-lang" />
         <div className="login-card">
           <header>
-            <span className="gh-wordmark login-mobile-mark">Grand Hill</span>
-            <p className="gh-eyebrow">Back Office</p>
-            <h1 className="gh-h3">Nueva contraseña</h1>
+            <Logo height={36} className="login-mobile-mark" />
+            <p className="gh-eyebrow">{t.common.backOffice}</p>
+            <h1 className="gh-h3">{t.auth.newPasswordTitle}</h1>
           </header>
 
           {!session ? (
             <div className="gh-form">
               <div className="gh-notice is-error" role="alert">
                 <AlertCircleIcon />
-                <p>El enlace no es válido o ya venció. Solicita uno nuevo desde la pantalla de inicio de sesión.</p>
+                <p>{t.auth.linkInvalid}</p>
               </div>
               <div className="login-alt">
-                <Link className="gh-link" to="/login">Ir a iniciar sesión</Link>
+                <Link className="gh-link" to="/login">{t.auth.goToSignIn}</Link>
               </div>
             </div>
           ) : (
             <form className="gh-form" onSubmit={onSubmit} noValidate>
               <div className={`gh-field${error ? " is-error" : ""}`}>
-                <label className="gh-field-label" htmlFor="new-password">Contraseña nueva</label>
+                <label className="gh-field-label" htmlFor="new-password">{t.auth.newPassword}</label>
                 <input
                   className="gh-input"
                   id="new-password"
@@ -81,10 +86,10 @@ export default function ResetPassword() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-                <p className="gh-help">Mínimo {MIN_LENGTH} caracteres.</p>
+                <p className="gh-help">{t.auth.minLength(MIN_LENGTH)}</p>
               </div>
               <div className={`gh-field${error ? " is-error" : ""}`}>
-                <label className="gh-field-label" htmlFor="confirm-password">Confirmar contraseña</label>
+                <label className="gh-field-label" htmlFor="confirm-password">{t.auth.confirmPassword}</label>
                 <input
                   className="gh-input"
                   id="confirm-password"
@@ -103,7 +108,7 @@ export default function ResetPassword() {
               )}
               <div className="login-actions">
                 <button className="gh-btn gh-btn-primary gh-btn-block" type="submit" disabled={busy || !password || !confirm}>
-                  {busy ? "Guardando…" : "Guardar contraseña"}
+                  {busy ? t.common.saving : t.auth.savePassword}
                 </button>
               </div>
             </form>

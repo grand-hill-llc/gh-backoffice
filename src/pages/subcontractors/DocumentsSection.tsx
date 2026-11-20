@@ -1,7 +1,6 @@
 import { useRef, useState, type FormEvent } from "react";
 import { supabase } from "../../lib/supabase";
 import {
-  DOC_LABEL,
   DOC_TYPES,
   DOCS_BUCKET,
   fileNameOf,
@@ -13,6 +12,7 @@ import {
 } from "../../lib/subcontractors";
 import { AlertCircleIcon } from "../Icons";
 import { ValidityTag } from "./tags";
+import { useT } from "../../i18n";
 
 const MAX_BYTES = 20 * 1024 * 1024;
 const ACCEPT = ".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx";
@@ -20,6 +20,7 @@ const ACCEPT = ".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx";
 type Props = { subId: string; docs: SubDocument[]; onChange: () => Promise<boolean> };
 
 export default function DocumentsSection({ subId, docs, onChange }: Props) {
+  const t = useT();
   const [adding, setAdding] = useState(false);
   const [rowError, setRowError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
@@ -31,7 +32,7 @@ export default function DocumentsSection({ subId, docs, onChange }: Props) {
     const { data, error } = await supabase.storage.from(DOCS_BUCKET).createSignedUrl(path, 120);
     if (error || !data) {
       tab?.close();
-      setRowError("No pudimos abrir el archivo.");
+      setRowError(t.subs.openFailed);
       return;
     }
     if (tab) tab.location.href = data.signedUrl;
@@ -42,7 +43,7 @@ export default function DocumentsSection({ subId, docs, onChange }: Props) {
     setRowError(null);
     const { error } = await supabase.from("subcontractor_documents").delete().eq("id", doc.id);
     if (error) {
-      setRowError("No pudimos eliminar el documento.");
+      setRowError(t.subs.deleteDocFailed);
       return;
     }
     if (doc.file_path) await supabase.storage.from(DOCS_BUCKET).remove([doc.file_path]);
@@ -53,10 +54,10 @@ export default function DocumentsSection({ subId, docs, onChange }: Props) {
   return (
     <section className="panel">
       <div className="panel-head">
-        <h2 className="panel-title gh-label">Documentos</h2>
+        <h2 className="panel-title gh-label">{t.subs.documents}</h2>
         {!adding && (
           <button className="gh-btn gh-btn-secondary gh-btn-sm" type="button" onClick={() => setAdding(true)}>
-            Agregar documento
+            {t.subs.addDocument}
           </button>
         )}
       </div>
@@ -80,16 +81,16 @@ export default function DocumentsSection({ subId, docs, onChange }: Props) {
       )}
 
       {docs.length === 0 ? (
-        !adding && <p className="gh-muted panel-empty">Sin documentos. Empieza por el seguro (COI), el W-9 y la licencia.</p>
+        !adding && <p className="gh-muted panel-empty">{t.subs.noDocuments}</p>
       ) : (
         <ul className="doc-list">
           {docs.map((d) => (
             <li key={d.id} className="doc-item">
               <div className="doc-main">
-                <p className="doc-type">{DOC_LABEL[d.doc_type]}</p>
+                <p className="doc-type">{t.subs.docTypes[d.doc_type]}</p>
                 <p className="gh-small gh-muted">
-                  {d.expires_on ? `Vence ${formatDate(d.expires_on)}` : "Sin fecha de vencimiento"}
-                  {d.issued_on && ` · Emitido ${formatDate(d.issued_on)}`}
+                  {d.expires_on ? t.subs.expiresOn(formatDate(d.expires_on, t.locale)) : t.subs.noExpiry}
+                  {d.issued_on && ` · ${t.subs.issuedOn(formatDate(d.issued_on, t.locale))}`}
                 </p>
                 {d.notes && <p className="gh-small doc-notes">{d.notes}</p>}
               </div>
@@ -98,22 +99,22 @@ export default function DocumentsSection({ subId, docs, onChange }: Props) {
                 <div className="doc-actions">
                   {d.file_path && (
                     <button className="text-btn" type="button" onClick={() => openFile(d.file_path!)} title={fileNameOf(d.file_path)}>
-                      Ver archivo
+                      {t.subs.viewFile}
                     </button>
                   )}
                   {pendingDelete === d.id ? (
                     <>
-                      <button className="text-btn is-danger" type="button" onClick={() => remove(d)}>Confirmar</button>
-                      <button className="text-btn" type="button" onClick={() => setPendingDelete(null)}>No</button>
+                      <button className="text-btn is-danger" type="button" onClick={() => remove(d)}>{t.common.confirm}</button>
+                      <button className="text-btn" type="button" onClick={() => setPendingDelete(null)}>{t.common.no}</button>
                     </>
                   ) : (
                     <button
                       className="text-btn"
                       type="button"
                       onClick={() => setPendingDelete(d.id)}
-                      aria-label={`Eliminar ${DOC_LABEL[d.doc_type]}`}
+                      aria-label={t.subs.deleteDocLabel(t.subs.docTypes[d.doc_type])}
                     >
-                      Eliminar
+                      {t.common.delete}
                     </button>
                   )}
                 </div>
@@ -127,6 +128,7 @@ export default function DocumentsSection({ subId, docs, onChange }: Props) {
 }
 
 function UploadForm({ subId, onCancel, onDone }: { subId: string; onCancel: () => void; onDone: () => void }) {
+  const t = useT();
   const fileRef = useRef<HTMLInputElement>(null);
   const [docType, setDocType] = useState<DocType>("coi");
   const [file, setFile] = useState<File | null>(null);
@@ -142,16 +144,16 @@ function UploadForm({ subId, onCancel, onDone }: { subId: string; onCancel: () =
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!file) return setError("Selecciona el archivo.");
-    if (file.size > MAX_BYTES) return setError("El archivo pesa más de 20 MB.");
-    if (datesInvalid) return setError("La fecha de vencimiento no puede ser anterior a la de emisión.");
+    if (!file) return setError(t.subs.pickFile);
+    if (file.size > MAX_BYTES) return setError(t.subs.fileTooBig);
+    if (datesInvalid) return setError(t.subs.datesInvalid);
 
     setBusy(true);
     const path = storagePathFor(subId, file.name);
     const up = await supabase.storage.from(DOCS_BUCKET).upload(path, file, { contentType: file.type || undefined });
     if (up.error) {
       setBusy(false);
-      return setError("No pudimos subir el archivo. Inténtalo de nuevo.");
+      return setError(t.subs.uploadFailed);
     }
     const { error } = await supabase.from("subcontractor_documents").insert({
       subcontractor_id: subId,
@@ -164,7 +166,7 @@ function UploadForm({ subId, onCancel, onDone }: { subId: string; onCancel: () =
     if (error) {
       await supabase.storage.from(DOCS_BUCKET).remove([path]);
       setBusy(false);
-      return setError("No pudimos guardar el documento. Inténtalo de nuevo.");
+      return setError(t.subs.saveDocFailed);
     }
     setBusy(false);
     onDone();
@@ -174,15 +176,15 @@ function UploadForm({ subId, onCancel, onDone }: { subId: string; onCancel: () =
     <form className="upload-form" onSubmit={onSubmit} noValidate>
       <div className="form-grid">
         <div className="gh-field">
-          <label className="gh-field-label" htmlFor="doc-type">Tipo</label>
+          <label className="gh-field-label" htmlFor="doc-type">{t.subs.docType}</label>
           <select id="doc-type" className="gh-input gh-select" value={docType} onChange={(e) => setDocType(e.target.value as DocType)}>
-            {DOC_TYPES.map((t) => (
-              <option key={t} value={t}>{DOC_LABEL[t]}</option>
+            {DOC_TYPES.map((d) => (
+              <option key={d} value={d}>{t.subs.docTypes[d]}</option>
             ))}
           </select>
         </div>
         <div className="gh-field span-2">
-          <label className="gh-field-label" htmlFor="doc-file">Archivo</label>
+          <label className="gh-field-label" htmlFor="doc-file">{t.subs.file}</label>
           <input
             ref={fileRef}
             id="doc-file"
@@ -191,14 +193,14 @@ function UploadForm({ subId, onCancel, onDone }: { subId: string; onCancel: () =
             accept={ACCEPT}
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
-          <p className="gh-help">PDF o imagen, hasta 20 MB.</p>
+          <p className="gh-help">{t.subs.fileHelp}</p>
         </div>
         <div className="gh-field">
-          <label className="gh-field-label" htmlFor="doc-issued">Emitido</label>
+          <label className="gh-field-label" htmlFor="doc-issued">{t.subs.issued}</label>
           <input id="doc-issued" className="gh-input" type="date" value={issuedOn} onChange={(e) => setIssuedOn(e.target.value)} />
         </div>
         <div className={`gh-field${datesInvalid ? " is-error" : ""}`}>
-          <label className="gh-field-label" htmlFor="doc-expires">Vence</label>
+          <label className="gh-field-label" htmlFor="doc-expires">{t.subs.expires}</label>
           <input
             id="doc-expires"
             className="gh-input"
@@ -208,14 +210,14 @@ function UploadForm({ subId, onCancel, onDone }: { subId: string; onCancel: () =
             onChange={(e) => setExpiresOn(e.target.value)}
             aria-invalid={datesInvalid}
           />
-          {needsExpiry && !expiresOn && <p className="gh-help">Recomendado: activa las alertas de vencimiento.</p>}
+          {needsExpiry && !expiresOn && <p className="gh-help">{t.subs.expiryHint}</p>}
         </div>
         <div className="gh-field span-2">
-          <label className="gh-field-label" htmlFor="doc-notes">Notas</label>
+          <label className="gh-field-label" htmlFor="doc-notes">{t.subs.notes}</label>
           <input
             id="doc-notes"
             className="gh-input"
-            placeholder={docType === "coi" ? "Aseguradora, número de póliza…" : undefined}
+            placeholder={docType === "coi" ? t.subs.coiNotesPlaceholder : undefined}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
@@ -231,9 +233,9 @@ function UploadForm({ subId, onCancel, onDone }: { subId: string; onCancel: () =
 
       <div className="form-actions">
         <button className="gh-btn gh-btn-primary gh-btn-sm" type="submit" disabled={busy || !file}>
-          {busy ? "Subiendo…" : "Guardar documento"}
+          {busy ? t.subs.uploading : t.subs.saveDocument}
         </button>
-        <button className="gh-link" type="button" onClick={onCancel} disabled={busy}>Cancelar</button>
+        <button className="gh-link" type="button" onClick={onCancel} disabled={busy}>{t.common.cancel}</button>
       </div>
     </form>
   );

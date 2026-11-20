@@ -7,7 +7,13 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Portal from "./pages/Portal";
 import ResetPassword from "./pages/ResetPassword";
-import { Bids, Clients, Projects } from "./pages/Sections";
+import { Projects } from "./pages/Sections";
+import BidDetail from "./pages/bids/BidDetail";
+import BidForm from "./pages/bids/BidForm";
+import BidList from "./pages/bids/BidList";
+import ClientDetail from "./pages/clients/ClientDetail";
+import ClientForm from "./pages/clients/ClientForm";
+import ClientList from "./pages/clients/ClientList";
 import SubcontractorDetail from "./pages/subcontractors/SubcontractorDetail";
 import SubcontractorForm from "./pages/subcontractors/SubcontractorForm";
 import SubcontractorList from "./pages/subcontractors/SubcontractorList";
@@ -32,8 +38,14 @@ export default function App() {
 
               <Route element={<RequireRole allow={STAFF} />}>
                 <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/bids" element={<Bids />} />
-                <Route path="/clientes" element={<Clients />} />
+                <Route path="/bids" element={<BidList />} />
+                <Route path="/bids/nuevo" element={<BidForm />} />
+                <Route path="/bids/:id" element={<BidDetail />} />
+                <Route path="/bids/:id/editar" element={<BidForm />} />
+                <Route path="/clientes" element={<ClientList />} />
+                <Route path="/clientes/nuevo" element={<ClientForm />} />
+                <Route path="/clientes/:id" element={<ClientDetail />} />
+                <Route path="/clientes/:id/editar" element={<ClientForm />} />
                 <Route path="/subcontratistas" element={<SubcontractorList />} />
                 <Route path="/subcontratistas/nuevo" element={<SubcontractorForm />} />
                 <Route path="/subcontratistas/:id" element={<SubcontractorDetail />} />

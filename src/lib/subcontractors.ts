@@ -1,4 +1,4 @@
-// Subcontractor domain: types mirroring supabase/migrations/0001_foundations.sql, Spanish labels and compliance rules.
+// Subcontractor domain: types mirroring supabase/migrations/0001_foundations.sql, keys and compliance rules.
 
 export type SubStatus = "prospect" | "prequalified" | "active" | "inactive";
 export type DocType = "coi" | "w9" | "license" | "agreement" | "other";
@@ -44,44 +44,43 @@ export type DocStatusRow = {
 export const SUB_COLUMNS =
   "id, company_name, legal_name, trades, contact_name, email, phone, city, state, status, notes, created_at, updated_at";
 
-export const STATUS_LABEL: Record<SubStatus, string> = {
-  prospect: "Prospecto",
-  prequalified: "Precalificado",
-  active: "Activo",
-  inactive: "Inactivo",
-};
-export const STATUSES = Object.keys(STATUS_LABEL) as SubStatus[];
-
-export const DOC_LABEL: Record<DocType, string> = {
-  coi: "Seguro (COI)",
-  w9: "W-9",
-  license: "Licencia",
-  agreement: "Contrato",
-  other: "Otro",
-};
-export const DOC_TYPES = Object.keys(DOC_LABEL) as DocType[];
+// Labels for every key below live in src/i18n (subs.statuses, subs.docTypes, subs.trades…).
+export const STATUSES: SubStatus[] = ["prospect", "prequalified", "active", "inactive"];
+export const DOC_TYPES: DocType[] = ["coi", "w9", "license", "agreement", "other"];
 
 /** Documents a subcontractor needs on file before working with Grand Hill. */
 export const REQUIRED_DOCS: DocType[] = ["coi", "w9", "license"];
 
-/** Suggestions only; any trade can be typed in. */
-export const COMMON_TRADES = [
-  "Concreto",
-  "Framing",
-  "Drywall",
-  "Pintura",
-  "Electricidad",
-  "Plomería",
-  "HVAC",
-  "Techos",
-  "Stucco",
-  "Pisos",
-  "Carpintería",
-  "Impermeabilización",
-  "Ventanas y puertas",
-  "Demolición",
-  "Paisajismo",
-];
+/** Suggested trades, stored by key so they read in either language. Any other trade is stored as typed. */
+export const TRADE_KEYS = [
+  "concrete",
+  "framing",
+  "drywall",
+  "painting",
+  "electrical",
+  "plumbing",
+  "hvac",
+  "roofing",
+  "stucco",
+  "flooring",
+  "carpentry",
+  "waterproofing",
+  "windowsDoors",
+  "demolition",
+  "landscaping",
+] as const;
+export type TradeKey = (typeof TRADE_KEYS)[number];
+
+/** Maps a stored value to its suggested-trade key, accepting the key itself or its label in any language
+ *  (rows saved before trades were stored by key hold Spanish labels such as "Pintura"). */
+export function tradeKeyOf(value: string, labelSets: Record<TradeKey, string>[]): TradeKey | null {
+  const v = value.trim().toLowerCase();
+  for (const key of TRADE_KEYS) {
+    if (key.toLowerCase() === v) return key;
+    if (labelSets.some((labels) => labels[key].toLowerCase() === v)) return key;
+  }
+  return null;
+}
 
 export const EXPIRING_DAYS = 30;
 
@@ -93,21 +92,6 @@ export function validityOf(expiresOn: string | null, today = todayISO()): Validi
 }
 
 export type ComplianceLevel = "ok" | "expiring" | "expired" | "missing";
-
-export const COMPLIANCE_LABEL: Record<ComplianceLevel, string> = {
-  ok: "Al día",
-  expiring: "Por vencer",
-  expired: "Vencido",
-  missing: "Incompleto",
-};
-
-/** State of one required document, used in sentences ("COI: vencido"). */
-export const DOC_STATE_LABEL: Record<ComplianceLevel, string> = {
-  ok: "vigente",
-  expiring: "por vencer",
-  expired: "vencido",
-  missing: "falta",
-};
 
 export type Compliance = {
   level: ComplianceLevel;
@@ -158,11 +142,11 @@ function toISO(d: Date): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-/** "2026-11-20" -> "20 nov 2026", without timezone shifts. */
-export function formatDate(iso: string | null): string {
+/** "2026-11-20" -> "20 nov 2026" / "Nov 20, 2026", without timezone shifts. */
+export function formatDate(iso: string | null, locale: string): string {
   if (!iso) return "—";
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("es-US", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(y, m - 1, d).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
 }
 
 /** Storage object name -> original file name (paths are `<sub id>/<uuid>/<file name>`). */

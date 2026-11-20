@@ -10,9 +10,12 @@ import "./styles/tokens.css";
 import "./styles/gh.css";
 import "./styles/app.css";
 import App from "./App";
+import { PrefsProvider } from "./lib/prefs";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <PrefsProvider>
+      <App />
+    </PrefsProvider>
   </React.StrictMode>
 );

@@ -4,12 +4,16 @@ import { useAuth } from "../auth/AuthProvider";
 import { Splash } from "../auth/RequireAuth";
 import { supabase } from "../lib/supabase";
 import { AlertCircleIcon, CheckCircleIcon } from "./Icons";
+import { Logo } from "../components/ui";
+import { LangSwitch } from "../components/PrefsControls";
+import { useT } from "../i18n";
 
 type Mode = "signin" | "forgot";
 
 export default function Login() {
   const { session, loading } = useAuth();
   const location = useLocation();
+  const t = useT();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,8 +43,8 @@ export default function Login() {
       // Same message for a wrong email or a wrong password: never reveal which accounts exist.
       setError(
         err.status === 400 || err.status === 401 || /invalid/i.test(err.message)
-          ? "Correo o contraseña incorrectos."
-          : "No pudimos conectar. Revisa tu conexión e inténtalo de nuevo."
+          ? t.auth.badCredentials
+          : t.auth.cannotConnect
       );
     }
     // On success the AuthProvider receives the session and this page redirects.
@@ -55,7 +59,7 @@ export default function Login() {
     });
     setBusy(false);
     if (err && err.status !== 400 && err.status !== 422) {
-      setError("No pudimos enviar el correo. Inténtalo de nuevo en unos minutos.");
+      setError(t.auth.sendFailed);
       return;
     }
     // Same confirmation whether or not the email has an account.
@@ -65,31 +69,28 @@ export default function Login() {
   return (
     <main className="login gh">
       <section className="login-brand gh-inverse" aria-hidden="true">
-        <span className="gh-wordmark">Grand Hill</span>
+        <Logo surface="inverse" height={40} />
         <div className="login-brand-copy">
-          <p className="gh-eyebrow">Back Office</p>
-          <h2 className="gh-h2">Proyectos, subcontratistas y cotizaciones en un solo lugar</h2>
-          <p>Acceso interno del equipo.</p>
+          <p className="gh-eyebrow">{t.common.backOffice}</p>
+          <h2 className="gh-h2">{t.auth.brandHeadline}</h2>
+          <p>{t.auth.brandNote}</p>
         </div>
       </section>
 
       <section className="login-panel">
+        <LangSwitch className="login-lang" />
         <div className="login-card">
           <header>
-            <span className="gh-wordmark login-mobile-mark">Grand Hill</span>
-            <p className="gh-eyebrow">Back Office</p>
-            <h1 className="gh-h3">{mode === "signin" ? "Iniciar sesión" : "Recuperar contraseña"}</h1>
-            <p className="gh-small gh-muted">
-              {mode === "signin"
-                ? "Ingresa con tu correo y contraseña."
-                : "Te enviaremos un enlace para crear una contraseña nueva."}
-            </p>
+            <Logo height={36} className="login-mobile-mark" />
+            <p className="gh-eyebrow">{t.common.backOffice}</p>
+            <h1 className="gh-h3">{mode === "signin" ? t.auth.signInTitle : t.auth.forgotTitle}</h1>
+            <p className="gh-small gh-muted">{mode === "signin" ? t.auth.signInIntro : t.auth.forgotIntro}</p>
           </header>
 
           {mode === "signin" ? (
             <form className="gh-form" onSubmit={onSignIn} noValidate>
               <div className={`gh-field${error ? " is-error" : ""}`}>
-                <label className="gh-field-label" htmlFor="email">Correo</label>
+                <label className="gh-field-label" htmlFor="email">{t.auth.email}</label>
                 <input
                   className="gh-input"
                   id="email"
@@ -103,7 +104,7 @@ export default function Login() {
                 />
               </div>
               <div className={`gh-field${error ? " is-error" : ""}`}>
-                <label className="gh-field-label" htmlFor="password">Contraseña</label>
+                <label className="gh-field-label" htmlFor="password">{t.auth.password}</label>
                 <input
                   className="gh-input"
                   id="password"
@@ -126,11 +127,11 @@ export default function Login() {
 
               <div className="login-actions">
                 <button className="gh-btn gh-btn-primary gh-btn-block" type="submit" disabled={busy || !email || !password}>
-                  {busy ? "Ingresando…" : "Ingresar"}
+                  {busy ? t.auth.signingIn : t.auth.signIn}
                 </button>
                 <div className="login-alt">
                   <button className="gh-link" type="button" onClick={() => switchMode("forgot")}>
-                    Olvidé mi contraseña
+                    {t.auth.forgotLink}
                   </button>
                 </div>
               </div>
@@ -140,12 +141,12 @@ export default function Login() {
               {sent ? (
                 <div className="gh-notice is-success" role="status">
                   <CheckCircleIcon />
-                  <p>Si el correo tiene una cuenta, recibirás un enlace para restablecer la contraseña. Revisa también la carpeta de spam.</p>
+                  <p>{t.auth.sentNotice}</p>
                 </div>
               ) : (
                 <>
                   <div className="gh-field">
-                    <label className="gh-field-label" htmlFor="email-forgot">Correo</label>
+                    <label className="gh-field-label" htmlFor="email-forgot">{t.auth.email}</label>
                     <input
                       className="gh-input"
                       id="email-forgot"
@@ -165,14 +166,14 @@ export default function Login() {
                   )}
                   <div className="login-actions">
                     <button className="gh-btn gh-btn-primary gh-btn-block" type="submit" disabled={busy || !email}>
-                      {busy ? "Enviando…" : "Enviar enlace"}
+                      {busy ? t.auth.sending : t.auth.sendLink}
                     </button>
                   </div>
                 </>
               )}
               <div className="login-alt">
                 <button className="gh-link" type="button" onClick={() => switchMode("signin")}>
-                  Volver a iniciar sesión
+                  {t.auth.backToSignIn}
                 </button>
               </div>
             </form>

@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { PageHeader } from "../components/ui";
 import { AlertCircleIcon } from "./Icons";
+import { useT } from "../i18n";
 
 type Counts = { openBids: number; activeSubs: number; docsAttention: number };
 
 export default function Dashboard() {
+  const t = useT();
   const [counts, setCounts] = useState<Counts | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,22 +35,22 @@ export default function Dashboard() {
 
   const missingMigration = !!error && /schema cache|does not exist|relation/i.test(error);
   const cards: { label: string; value: number | undefined; note: string }[] = [
-    { label: "Bids abiertos", value: counts?.openBids, note: "Nuevos, en cotización o enviados" },
-    { label: "Subcontratistas activos", value: counts?.activeSubs, note: "Con estado activo en el directorio" },
-    { label: "Documentos por atender", value: counts?.docsAttention, note: "Vencidos o por vencer en 30 días" },
+    { label: t.dashboard.openBids, value: counts?.openBids, note: t.dashboard.openBidsNote },
+    { label: t.dashboard.activeSubs, value: counts?.activeSubs, note: t.dashboard.activeSubsNote },
+    { label: t.dashboard.docsAttention, value: counts?.docsAttention, note: t.dashboard.docsAttentionNote },
   ];
 
   return (
     <>
-      <PageHeader eyebrow="Back Office" title="Resumen" description="Estado general del negocio de un vistazo." />
+      <PageHeader eyebrow={t.common.backOffice} title={t.dashboard.title} description={t.dashboard.description} />
 
       {error && (
         <div className="gh-notice is-error" role="alert" style={{ marginBottom: "var(--space-4)" }}>
           <AlertCircleIcon />
           <p>
             {missingMigration
-              ? "Faltan las tablas en Supabase. Aplica la migración supabase/migrations/0001_foundations.sql en el SQL Editor."
-              : "No pudimos cargar los datos. Inténtalo de nuevo."}
+              ? t.dashboard.missingMigration
+              : t.dashboard.loadFailed}
           </p>
         </div>
       )}
