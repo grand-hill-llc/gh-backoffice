@@ -332,3 +332,52 @@
 .lang-switch button:focus-visible { outline: var(--stroke-rule) solid var(--focus); outline-offset: 2px; }
 @media (max-width: 960px) { .login-lang { top: var(--space-2); right: 20px; } }
 @media (prefers-reduced-motion: reduce) { .user-menu-chevron { transition: none; } }
+
+/* ================================================================
+   Clients and bids
+   ================================================================ */
+
+.toolbar .toolbar-wide { flex: 0 1 280px; }
+.cell-muted { color: var(--ink-muted); }
+.gh-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* View tabs above the bids table */
+.view-tabs { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-3); border-bottom: var(--stroke-hairline) solid var(--line); }
+.view-tab {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 0; margin-bottom: -1px;
+  border: 0; border-bottom: var(--stroke-rule) solid transparent; background: none; cursor: pointer; color: var(--ink-muted);
+  font: 600 13px/1 var(--font-sans); letter-spacing: .12em; text-transform: uppercase;
+}
+.view-tab:hover { color: var(--ink); }
+.view-tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.view-tab:focus-visible { outline: var(--stroke-rule) solid var(--focus); outline-offset: 2px; }
+.view-count { font-variant-numeric: tabular-nums; font-weight: 500; letter-spacing: 0; color: var(--ink-muted); }
+
+.due-note { display: block; margin-top: 2px; font-size: 13px; line-height: 1.4; font-weight: 500; }
+.due-note.is-danger { color: var(--danger); }
+.due-note.is-warning { color: var(--warning); }
+
+.meta-link { font-size: 14px; color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 4px; }
+
+/* Bid detail: quick status change */
+.status-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-2); margin-bottom: var(--space-3); }
+.status-segmented { flex: 0 1 auto; background: var(--surface-raised); overflow-x: auto; }
+.status-segmented button { flex: 0 0 auto; height: 36px; padding: 0 14px; }
+.status-bar .gh-ok, .status-bar .gh-error { margin: 0; }
+
+.money-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin-bottom: var(--space-3); }
+.money-card { padding: var(--space-2) var(--space-3); background: var(--surface-raised); border: var(--stroke-hairline) solid var(--line); }
+.money-card p { margin: 0; }
+.money-value { margin-top: 4px !important; font-family: var(--font-display); font-size: 26px; line-height: 1.2; font-weight: 300; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+
+/* Money input with a fixed $ prefix */
+.money-input { position: relative; }
+.money-input span { position: absolute; left: var(--space-2); top: 50%; transform: translateY(-50%); color: var(--ink-muted); pointer-events: none; }
+.money-input .gh-input { padding-left: 32px; font-variant-numeric: tabular-nums; }
+.gh-field.is-error .money-input .gh-input { padding-left: 31px; }
+
+@media (max-width: 720px) {
+  .toolbar .toolbar-wide { flex: 1 1 100%; }
+  .money-grid { grid-template-columns: 1fr; }
+  .status-segmented { width: 100%; }
+}
