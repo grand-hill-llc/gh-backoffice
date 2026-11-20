@@ -19,11 +19,21 @@ export default function BidDetail() {
   const [state, setState] = useState<"loading" | "ready" | "missing" | "error">("loading");
   const [statusBusy, setStatusBusy] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
+    // Missing projects table (migration 0002 not applied) just hides the button.
+    supabase
+      .from("projects")
+      .select("id")
+      .eq("bid_id", id!)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (active) setProjectId((data as { id: string } | null)?.id ?? null);
+      });
     supabase
       .from("bids")
       .select(`${BID_COLUMNS}, client:clients(id, name)`)
@@ -93,6 +103,13 @@ export default function BidDetail() {
         <div className="detail-title-row">
           <h1 className="gh-h2">{bid.title}</h1>
           <div className="detail-actions">
+            {projectId ? (
+              <Link className="gh-btn gh-btn-secondary gh-btn-sm" to={`/proyectos/${projectId}`}>{t.projects.viewProject}</Link>
+            ) : (
+              bid.status === "won" && (
+                <Link className="gh-btn gh-btn-primary gh-btn-sm" to={`/proyectos/nuevo?bid=${bid.id}`}>{t.projects.createFromBid}</Link>
+              )
+            )}
             <Link className="gh-btn gh-btn-secondary gh-btn-sm" to={`/bids/${bid.id}/editar`}>{t.common.edit}</Link>
           </div>
         </div>

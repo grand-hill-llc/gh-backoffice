@@ -14,6 +14,7 @@ import {
   type ClientType,
 } from "../../lib/sales";
 import { PageHeader } from "../../components/ui";
+import MoneyField from "../../components/MoneyField";
 import { AlertCircleIcon } from "../Icons";
 import { useT } from "../../i18n";
 
@@ -316,38 +317,3 @@ export default function BidForm() {
   );
 }
 
-function MoneyField({
-  id,
-  label,
-  help,
-  value,
-  error,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  help: string;
-  value: string;
-  error: string | null;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className={`gh-field${error ? " is-error" : ""}`}>
-      <label className="gh-field-label" htmlFor={id}>{label}</label>
-      <div className="money-input">
-        <span aria-hidden="true">$</span>
-        <input
-          id={id}
-          className="gh-input"
-          inputMode="decimal"
-          autoComplete="off"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          aria-invalid={!!error}
-          aria-describedby={`${id}-help`}
-        />
-      </div>
-      {error ? <p className="gh-error" id={`${id}-help`}>{error}</p> : <p className="gh-help" id={`${id}-help`}>{help}</p>}
-    </div>
-  );
-}

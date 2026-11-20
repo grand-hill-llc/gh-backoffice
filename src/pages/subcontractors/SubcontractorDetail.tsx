@@ -64,9 +64,11 @@ export default function SubcontractorDetail() {
     if (error) {
       setDeleting(false);
       setDeleteError(
-        /profiles|violates/i.test(error.message)
-          ? t.subs.deleteBlocked
-          : t.subs.deleteFailed
+        /project_subs/i.test(error.message)
+          ? t.subs.deleteBlockedProjects
+          : /profiles|violates/i.test(error.message)
+            ? t.subs.deleteBlocked
+            : t.subs.deleteFailed
       );
       return;
     }

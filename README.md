@@ -33,6 +33,7 @@ npm run dev
 ## Base de datos y roles
 
 1. En Supabase abre **SQL Editor**, pega el contenido de `supabase/migrations/0001_foundations.sql` y ejecútalo (una sola vez).
+   Después haz lo mismo con `supabase/migrations/0002_projects.sql` (proyectos, subcontratistas asignados y movimientos).
 2. Crea el perfil de cada persona. La migración ya crea el de Adrian (`adriangerig@gmail.com`) como `super_admin`. Para Adiel, primero créalo en Authentication > Users y luego ejecuta:
 
 ```sql
@@ -53,6 +54,7 @@ Un usuario sin fila en `profiles` inicia sesión pero no ve nada. La seguridad r
 - `/login` inicio de sesión y recuperación de contraseña
 - `/restablecer` destino del enlace del correo de recuperación
 - `/` redirige según el rol
-- `/dashboard`, `/bids`, `/clientes`, `/subcontratistas`, `/proyectos` personal interno (super admin y admin)
+- `/dashboard`, `/bids`, `/clientes`, `/subcontratistas`, `/proyectos` personal interno (super admin y admin), cada uno con `/nuevo`, `/:id` y `/:id/editar`
+- `/proyectos/nuevo?bid=<id>` crea un proyecto copiando los datos de un bid ganado
 - `/equipo` solo super admin
 - `/portal` solo subcontratistas
