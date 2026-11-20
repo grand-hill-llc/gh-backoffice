@@ -22,21 +22,6 @@ export function Clients() {
   );
 }
 
-export function Subcontractors() {
-  return (
-    <>
-      <PageHeader
-        eyebrow="Operaciones"
-        title="Subcontratistas"
-        description="Directorio con seguro, W-9 y licencia vigentes, y alertas de vencimiento."
-      />
-      <EmptyState title="Todavía no hay subcontratistas registrados">
-        Las tablas de subcontratistas y documentos ya existen, junto con la vista de vencimientos. Falta el formulario de alta y la carga de documentos.
-      </EmptyState>
-    </>
-  );
-}
-
 export function Projects() {
   return (
     <>

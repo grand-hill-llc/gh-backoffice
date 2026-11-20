@@ -36,6 +36,7 @@
   --focus-inverse: var(--white);
   --danger: var(--crimson);
   --success: #1e7a4f;
+  --warning: #8a5a00;
 
   /* Type */
   --font-display: "Inter Tight", "Inter", system-ui, sans-serif;
@@ -81,5 +82,6 @@
     --focus: var(--white);
     --danger: var(--crimson-tint);
     --success: #5cc08e;
+    --warning: #e6b450;
   }
 }
