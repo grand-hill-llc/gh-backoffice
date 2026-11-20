@@ -25,3 +25,12 @@ export function AlertCircleIcon() {
     </svg>
   );
 }
+
+/** Trash can, for destructive actions. Paired with text, never on its own. */
+export function TrashIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2l1-12M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7" />
+    </svg>
+  );
+}

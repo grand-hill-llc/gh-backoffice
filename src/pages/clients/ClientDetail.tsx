@@ -5,6 +5,7 @@ import { BID_COLUMNS, CLIENT_COLUMNS, formatMoney, type Bid, type Client } from 
 import { formatDate, todayISO } from "../../lib/subcontractors";
 import { Tag } from "../../components/ui";
 import DeleteZone from "../../components/DeleteZone";
+import { Facts, mailHref, NoteBlock, Panel, telHref } from "../../components/Panel";
 import { AlertCircleIcon } from "../Icons";
 import { BidStatusTag, DueNote } from "../bids/bidTags";
 import { useT } from "../../i18n";
@@ -86,39 +87,38 @@ export default function ClientDetail() {
       </header>
 
       <div className="detail-grid">
-        <section className="panel">
-          <h2 className="panel-title gh-label">{t.sales.details}</h2>
-          <dl className="facts">
-            <Fact label={t.sales.contact} value={client.contact_name} />
-            <Fact label={t.sales.email} value={client.email} href={client.email ? `mailto:${client.email}` : undefined} />
-            <Fact label={t.sales.phone} value={client.phone} href={client.phone ? `tel:${client.phone.replace(/[^\d+]/g, "")}` : undefined} />
-            <Fact label={t.sales.createdOn} value={formatDate(client.created_at, t.locale)} />
-          </dl>
-          {client.notes && (
-            <>
-              <h3 className="gh-label facts-notes-label">{t.sales.notes}</h3>
-              <p className="facts-notes">{client.notes}</p>
-            </>
-          )}
-        </section>
+        <Panel title={t.sales.details}>
+          <Facts
+            completeHref={`/clientes/${client.id}/editar`}
+            items={[
+              { label: t.sales.contact, value: client.contact_name },
+              { label: t.sales.email, value: client.email, href: mailHref(client.email) },
+              { label: t.sales.phone, value: client.phone, href: telHref(client.phone) },
+              { label: t.sales.createdOn, value: formatDate(client.created_at, t.locale) },
+            ]}
+          />
+          {client.notes && <NoteBlock title={t.sales.notes} text={client.notes} />}
+        </Panel>
 
-        <section className="panel">
-          <div className="panel-head">
-            <h2 className="panel-title gh-label">{t.sales.clientBids}</h2>
-            <Link className="gh-btn gh-btn-secondary gh-btn-sm" to={`/bids/nuevo?cliente=${client.id}`}>{t.sales.newBid}</Link>
-          </div>
+        <Panel
+          title={t.sales.clientBids}
+          action={<Link className="gh-btn gh-btn-secondary gh-btn-sm" to={`/bids/nuevo?cliente=${client.id}`}>{t.sales.newBid}</Link>}
+        >
           {bids.length === 0 ? (
-            <p className="gh-muted panel-empty">{t.sales.noClientBids}</p>
+            <p className="panel-empty">{t.sales.noClientBids}</p>
           ) : (
             <ul className="doc-list">
               {bids.map((b) => (
                 <li key={b.id} className="doc-item">
                   <div className="doc-main">
                     <Link className="row-link" to={`/bids/${b.id}`}>{b.title}</Link>
-                    <p className="gh-small gh-muted">
-                      {b.due_date ? formatDate(b.due_date, t.locale) : "—"}
-                      {b.our_price !== null && ` · ${formatMoney(b.our_price, t.locale)}`}
-                    </p>
+                    {(b.due_date || b.our_price !== null) && (
+                      <p className="gh-small gh-muted">
+                        {[b.due_date && formatDate(b.due_date, t.locale), b.our_price !== null && formatMoney(b.our_price, t.locale)]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
                     <DueNote bid={b} today={today} />
                   </div>
                   <div className="doc-side">
@@ -128,7 +128,7 @@ export default function ClientDetail() {
               ))}
             </ul>
           )}
-        </section>
+        </Panel>
       </div>
 
       <DeleteZone
@@ -145,11 +145,3 @@ export default function ClientDetail() {
   );
 }
 
-export function Fact({ label, value, href }: { label: string; value: string | null; href?: string }) {
-  return (
-    <div className="fact">
-      <dt className="gh-label">{label}</dt>
-      <dd>{value ? href ? <a href={href}>{value}</a> : value : <span className="gh-muted">—</span>}</dd>
-    </div>
-  );
-}

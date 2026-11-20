@@ -13,6 +13,8 @@ import {
 import { AlertCircleIcon } from "../Icons";
 import { ComplianceTag, StatusTag } from "./tags";
 import DocumentsSection from "./DocumentsSection";
+import DeleteZone from "../../components/DeleteZone";
+import { Facts, mailHref, NoteBlock, Panel, telHref } from "../../components/Panel";
 import { tradeLabel, useT } from "../../i18n";
 
 export default function SubcontractorDetail() {
@@ -22,7 +24,6 @@ export default function SubcontractorDetail() {
   const [sub, setSub] = useState<Subcontractor | null>(null);
   const [docs, setDocs] = useState<SubDocument[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "missing" | "error">("loading");
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -63,9 +64,11 @@ export default function SubcontractorDetail() {
     if (error) {
       setDeleting(false);
       setDeleteError(
-        /profiles|violates/i.test(error.message)
-          ? t.subs.deleteBlocked
-          : t.subs.deleteFailed
+        /project_subs/i.test(error.message)
+          ? t.subs.deleteBlockedProjects
+          : /profiles|violates/i.test(error.message)
+            ? t.subs.deleteBlocked
+            : t.subs.deleteFailed
       );
       return;
     }
@@ -121,56 +124,35 @@ export default function SubcontractorDetail() {
       </section>
 
       <div className="detail-grid">
-        <section className="panel">
-          <h2 className="panel-title gh-label">{t.subs.details}</h2>
-          <dl className="facts">
-            <Fact label={t.subs.legalName} value={sub.legal_name} />
-            <Fact label={t.subs.contact} value={sub.contact_name} />
-            <Fact label={t.subs.email} value={sub.email} href={sub.email ? `mailto:${sub.email}` : undefined} />
-            <Fact label={t.subs.phone} value={sub.phone} href={sub.phone ? `tel:${sub.phone.replace(/[^\d+]/g, "")}` : undefined} />
-            <Fact label={t.subs.location} value={location} />
-            <Fact label={t.subs.createdOn} value={formatDate(sub.created_at, t.locale)} />
-          </dl>
-          {sub.notes && (
-            <>
-              <h3 className="gh-label facts-notes-label">{t.subs.notes}</h3>
-              <p className="facts-notes">{sub.notes}</p>
-            </>
-          )}
-        </section>
+        <Panel title={t.subs.details}>
+          <Facts
+            completeHref={`/subcontratistas/${sub.id}/editar`}
+            items={[
+              { label: t.subs.legalName, value: sub.legal_name },
+              { label: t.subs.contact, value: sub.contact_name },
+              { label: t.subs.email, value: sub.email, href: mailHref(sub.email) },
+              { label: t.subs.phone, value: sub.phone, href: telHref(sub.phone) },
+              { label: t.subs.location, value: location },
+              { label: t.subs.createdOn, value: formatDate(sub.created_at, t.locale) },
+            ]}
+          />
+          {sub.notes && <NoteBlock title={t.subs.notes} text={sub.notes} />}
+        </Panel>
 
         <DocumentsSection subId={sub.id} docs={docs} onChange={loadDocs} />
       </div>
 
-      <section className="danger-zone">
-        {!confirmDelete ? (
-          <button className="gh-link danger-link" type="button" onClick={() => setConfirmDelete(true)}>
-            {t.subs.deleteSub}
-          </button>
-        ) : (
-          <div className="confirm-box" role="alertdialog" aria-labelledby="confirm-delete-title">
-            <p id="confirm-delete-title">{t.subs.deleteConfirm(sub.company_name, docs.length)}</p>
-            {deleteError && <p className="gh-error">{deleteError}</p>}
-            <div className="form-actions">
-              <button className="gh-btn gh-btn-primary gh-btn-sm" type="button" onClick={onDelete} disabled={deleting}>
-                {deleting ? t.subs.deleting : t.subs.deleteForever}
-              </button>
-              <button className="gh-link" type="button" onClick={() => setConfirmDelete(false)} disabled={deleting}>
-                {t.common.cancel}
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
+      <DeleteZone
+        label={t.subs.deleteSub}
+        message={t.subs.deleteConfirm(sub.company_name, docs.length)}
+        confirmLabel={t.subs.deleteForever}
+        busyLabel={t.subs.deleting}
+        cancelLabel={t.common.cancel}
+        error={deleteError}
+        busy={deleting}
+        onConfirm={onDelete}
+      />
     </>
   );
 }
 
-function Fact({ label, value, href }: { label: string; value: string | null; href?: string }) {
-  return (
-    <div className="fact">
-      <dt className="gh-label">{label}</dt>
-      <dd>{value ? href ? <a href={href}>{value}</a> : value : <span className="gh-muted">—</span>}</dd>
-    </div>
-  );
-}

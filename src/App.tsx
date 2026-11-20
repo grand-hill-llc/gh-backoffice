@@ -7,7 +7,9 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Portal from "./pages/Portal";
 import ResetPassword from "./pages/ResetPassword";
-import { Projects } from "./pages/Sections";
+import ProjectDetail from "./pages/projects/ProjectDetail";
+import ProjectForm from "./pages/projects/ProjectForm";
+import ProjectList from "./pages/projects/ProjectList";
 import BidDetail from "./pages/bids/BidDetail";
 import BidForm from "./pages/bids/BidForm";
 import BidList from "./pages/bids/BidList";
@@ -50,7 +52,10 @@ export default function App() {
                 <Route path="/subcontratistas/nuevo" element={<SubcontractorForm />} />
                 <Route path="/subcontratistas/:id" element={<SubcontractorDetail />} />
                 <Route path="/subcontratistas/:id/editar" element={<SubcontractorForm />} />
-                <Route path="/proyectos" element={<Projects />} />
+                <Route path="/proyectos" element={<ProjectList />} />
+                <Route path="/proyectos/nuevo" element={<ProjectForm />} />
+                <Route path="/proyectos/:id" element={<ProjectDetail />} />
+                <Route path="/proyectos/:id/editar" element={<ProjectForm />} />
               </Route>
 
               <Route element={<RequireRole allow={["super_admin"]} />}>

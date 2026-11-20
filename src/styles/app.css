@@ -199,18 +199,30 @@
 .compliance-state::first-letter { text-transform: uppercase; }
 
 .detail-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-3); align-items: start; }
-.panel { background: var(--surface-raised); border: var(--stroke-hairline) solid var(--line); border-top: var(--stroke-accent) solid var(--ink); padding: var(--space-3) var(--space-4) var(--space-4); display: grid; gap: var(--space-3); min-width: 0; }
-.panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 44px; }
-.panel-title { margin: 0; }
-.panel > .panel-title { min-height: 44px; display: flex; align-items: center; }
-.panel-empty { margin: 0; }
+.panel { background: var(--surface-raised); border: var(--stroke-hairline) solid var(--line); min-width: 0; }
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+  min-height: 64px; padding: var(--space-1) var(--space-3) var(--space-1) var(--space-4);
+  border-bottom: var(--stroke-hairline) solid var(--line);
+}
+.panel-title { margin: 0; color: var(--ink); }
+.panel-body { display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-4); }
+.panel-empty { margin: 0; color: var(--ink-muted); }
+.panel-text { margin: 0; white-space: pre-wrap; }
 
-.facts { margin: 0; display: grid; gap: var(--space-2); }
-.fact { display: grid; gap: 2px; }
+/* Label / value rows */
+.facts { margin: 0; display: grid; }
+.fact { display: grid; grid-template-columns: minmax(96px, 34%) minmax(0, 1fr); gap: var(--space-2); align-items: baseline; padding: 12px 0; border-top: var(--stroke-hairline) solid var(--line); }
+.fact:first-child { border-top: 0; padding-top: 0; }
+.fact:last-child { padding-bottom: 0; }
 .fact dd { margin: 0; overflow-wrap: anywhere; }
 .fact a { color: var(--ink); text-decoration-color: var(--accent); text-underline-offset: 3px; }
-.facts-notes-label { margin: 0; padding-top: var(--space-2); border-top: var(--stroke-hairline) solid var(--line); }
-.facts-notes { margin: 0; white-space: pre-wrap; }
+.facts-missing { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--space-2); margin: 0; padding: 12px var(--space-2); background: var(--surface-alt); font-size: 14px; }
+.facts-complete { font-weight: 600; color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 4px; }
+.note-block { display: grid; gap: var(--space-1); padding-top: var(--space-3); border-top: var(--stroke-hairline) solid var(--line); }
+.note-block h3, .note-block p { margin: 0; }
+.note-block p { white-space: pre-wrap; }
+.panel-body > .note-block:first-child { padding-top: 0; border-top: 0; }
 
 .doc-list { list-style: none; margin: 0; padding: 0; }
 .doc-item { display: flex; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) 0; border-top: var(--stroke-hairline) solid var(--line); }
@@ -234,7 +246,9 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .upload-form { background: var(--surface); } }
 
 .danger-zone { margin-top: var(--space-8); padding-top: var(--space-3); border-top: var(--stroke-hairline) solid var(--line); }
-.danger-link { color: var(--danger); border-bottom-color: var(--danger); }
+.danger-link { gap: 8px; color: var(--danger); border-bottom-color: var(--danger); }
+.icon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.gh-btn .icon { margin-left: -4px; }
 .confirm-box { display: grid; gap: var(--space-2); max-width: 620px; padding: var(--space-3); border: var(--stroke-hairline) solid var(--danger); background: var(--surface-raised); }
 .confirm-box p { margin: 0; }
 
@@ -249,7 +263,9 @@
   .form-section { padding: var(--space-3) var(--space-2); }
   .compliance-grid { grid-template-columns: 1fr; }
   .detail-title-row { flex-direction: column; }
-  .panel { padding: var(--space-2) var(--space-2) var(--space-3); }
+  .panel-head { padding: var(--space-1) var(--space-2); min-height: 56px; }
+  .panel-body { padding: var(--space-2) var(--space-2) var(--space-3); }
+  .fact { grid-template-columns: 1fr; gap: 2px; }
   .doc-item { flex-direction: column; }
   .doc-side { justify-items: start; }
   .cell-trades { max-width: none; }
@@ -389,3 +405,32 @@
 .margin-preview.is-negative { color: var(--danger); }
 .money-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 1100px) { .money-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ================================================================
+   Projects
+   ================================================================ */
+
+.form-intro { margin: calc(-1 * var(--space-4)) 0 var(--space-4); max-width: 620px; }
+.detail-stack { margin-top: var(--space-3); }
+
+/* Collected share of the contract */
+.progress { display: inline-block; vertical-align: middle; width: 56px; height: 4px; background: var(--line); }
+.money-card .progress { display: block; width: 100%; margin: 8px 0 2px; }
+.progress-fill { display: block; height: 100%; background: var(--success); }
+
+/* Movements table inside a panel */
+.table-wrap.is-flush { border: 0; background: transparent; margin: 0 calc(-1 * var(--space-4)); }
+.movements-table td, .movements-table th { padding-top: 12px; padding-bottom: 12px; }
+.movements-table td:first-child, .movements-table th:first-child { padding-left: var(--space-4); }
+.movements-table td:last-child, .movements-table th:last-child { padding-right: var(--space-4); }
+.gh-table td.is-in { color: var(--success); }
+.gh-table .row-actions { text-align: right; }
+.row-actions .text-btn + .text-btn { margin-left: var(--space-2); }
+.kind-segmented { max-width: 420px; }
+.kind-segmented button { height: 36px; }
+
+@media (max-width: 720px) {
+  .table-wrap.is-flush { margin: 0 calc(-1 * var(--space-2)); }
+  .movements-table td:first-child, .movements-table th:first-child { padding-left: var(--space-2); }
+  .movements-table td:last-child, .movements-table th:last-child { padding-right: var(--space-2); }
+}

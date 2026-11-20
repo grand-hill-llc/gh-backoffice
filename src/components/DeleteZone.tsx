@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TrashIcon } from "../pages/Icons";
 
 /** Bottom-of-page delete link that expands into an explicit confirmation. */
 export default function DeleteZone({
@@ -25,6 +26,7 @@ export default function DeleteZone({
     <section className="danger-zone">
       {!confirming ? (
         <button className="gh-link danger-link" type="button" onClick={() => setConfirming(true)}>
+          <TrashIcon />
           {label}
         </button>
       ) : (
@@ -33,6 +35,7 @@ export default function DeleteZone({
           {error && <p className="gh-error">{error}</p>}
           <div className="form-actions">
             <button className="gh-btn gh-btn-primary gh-btn-sm" type="button" onClick={onConfirm} disabled={busy}>
+              {!busy && <TrashIcon />}
               {busy ? busyLabel : confirmLabel}
             </button>
             <button className="gh-link" type="button" onClick={() => setConfirming(false)} disabled={busy}>

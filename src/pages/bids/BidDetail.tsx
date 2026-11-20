@@ -5,7 +5,7 @@ import { BID_COLUMNS, BID_STATUSES, formatMoney, formatPct, marginOf, type Bid, 
 import { formatDate, todayISO } from "../../lib/subcontractors";
 import DeleteZone from "../../components/DeleteZone";
 import { AlertCircleIcon } from "../Icons";
-import { Fact } from "../clients/ClientDetail";
+import { Facts, NoteBlock, Panel } from "../../components/Panel";
 import { DueNote } from "./bidTags";
 import { useT } from "../../i18n";
 
@@ -19,11 +19,21 @@ export default function BidDetail() {
   const [state, setState] = useState<"loading" | "ready" | "missing" | "error">("loading");
   const [statusBusy, setStatusBusy] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
+    // Missing projects table (migration 0002 not applied) just hides the button.
+    supabase
+      .from("projects")
+      .select("id")
+      .eq("bid_id", id!)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (active) setProjectId((data as { id: string } | null)?.id ?? null);
+      });
     supabase
       .from("bids")
       .select(`${BID_COLUMNS}, client:clients(id, name)`)
@@ -93,6 +103,13 @@ export default function BidDetail() {
         <div className="detail-title-row">
           <h1 className="gh-h2">{bid.title}</h1>
           <div className="detail-actions">
+            {projectId ? (
+              <Link className="gh-btn gh-btn-secondary gh-btn-sm" to={`/proyectos/${projectId}`}>{t.projects.viewProject}</Link>
+            ) : (
+              bid.status === "won" && (
+                <Link className="gh-btn gh-btn-primary gh-btn-sm" to={`/proyectos/nuevo?bid=${bid.id}`}>{t.projects.createFromBid}</Link>
+              )
+            )}
             <Link className="gh-btn gh-btn-secondary gh-btn-sm" to={`/bids/${bid.id}/editar`}>{t.common.edit}</Link>
           </div>
         </div>
@@ -144,23 +161,19 @@ export default function BidDetail() {
       </div>
 
       <div className="detail-grid">
-        <section className="panel">
-          <h2 className="panel-title gh-label">{t.sales.details}</h2>
-          <dl className="facts">
-            <Fact label={t.sales.location} value={bid.location} />
-            <Fact label={t.sales.createdOn} value={formatDate(bid.created_at, t.locale)} />
-          </dl>
-        </section>
-        <section className="panel">
-          <h2 className="panel-title gh-label">{t.sales.scope}</h2>
-          {bid.scope ? <p className="facts-notes">{bid.scope}</p> : <p className="gh-muted panel-empty">—</p>}
-          {bid.notes && (
-            <>
-              <h3 className="gh-label facts-notes-label">{t.sales.notes}</h3>
-              <p className="facts-notes">{bid.notes}</p>
-            </>
-          )}
-        </section>
+        <Panel title={t.sales.details}>
+          <Facts
+            completeHref={`/bids/${bid.id}/editar`}
+            items={[
+              { label: t.sales.location, value: bid.location },
+              { label: t.sales.createdOn, value: formatDate(bid.created_at, t.locale) },
+            ]}
+          />
+        </Panel>
+        <Panel title={t.sales.scope}>
+          {bid.scope ? <p className="panel-text">{bid.scope}</p> : <p className="panel-empty">—</p>}
+          {bid.notes && <NoteBlock title={t.sales.notes} text={bid.notes} />}
+        </Panel>
       </div>
 
       <DeleteZone
