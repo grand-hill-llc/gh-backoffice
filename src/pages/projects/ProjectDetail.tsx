@@ -17,7 +17,7 @@ import DeleteZone from "../../components/DeleteZone";
 import { Facts, NoteBlock, Panel } from "../../components/Panel";
 import { AlertCircleIcon } from "../Icons";
 import { CollectedBar } from "./projectTags";
-import ProjectSubs, { type AssignmentRow, type SubOption } from "./ProjectSubs";
+import ProjectSubs, { type AssignmentRow, type SubOption, type WorkUpdate } from "./ProjectSubs";
 import ProjectMovements from "./ProjectMovements";
 import { useT } from "../../i18n";
 
@@ -34,6 +34,7 @@ export default function ProjectDetail() {
   const [state, setState] = useState<"loading" | "ready" | "missing" | "error">("loading");
   const [statusBusy, setStatusBusy] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [refreshError, setRefreshError] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -74,11 +75,19 @@ export default function ProjectDetail() {
     };
   }, [id, loadWork]);
 
-  const reloadWork = async () => {
+  /** Shows a change at once (from the row the save returned), then re-reads everything from the server
+   *  so totals match the database. A failed re-read is reported instead of silently ignored. */
+  const applyWork = async (update?: WorkUpdate) => {
+    if (update) {
+      const next = update({ assignments, movements });
+      setAssignments(next.assignments);
+      setMovements(next.movements);
+    }
+    setRefreshError(false);
     try {
       await loadWork();
     } catch {
-      /* keep what is on screen; the next action will surface the error */
+      setRefreshError(true);
     }
   };
 
@@ -198,6 +207,13 @@ export default function ProjectDetail() {
         </div>
       </div>
 
+      {refreshError && (
+        <div className="gh-notice is-error" role="alert" style={{ marginBottom: "var(--space-3)" }}>
+          <AlertCircleIcon />
+          <p>{t.projects.refreshFailed}</p>
+        </div>
+      )}
+
       <div className="detail-grid">
         <Panel title={t.projects.details}>
           <Facts
@@ -212,11 +228,11 @@ export default function ProjectDetail() {
           {project.notes && <NoteBlock title={t.projects.notes} text={project.notes} />}
         </Panel>
 
-        <ProjectSubs projectId={project.id} assignments={assignments} movements={movements} directory={directory} onChange={reloadWork} />
+        <ProjectSubs projectId={project.id} assignments={assignments} movements={movements} directory={directory} onChange={applyWork} />
       </div>
 
       <div className="detail-stack">
-        <ProjectMovements projectId={project.id} movements={movements} assignments={assignments} onChange={reloadWork} />
+        <ProjectMovements projectId={project.id} movements={movements} assignments={assignments} onChange={applyWork} />
       </div>
 
       <DeleteZone

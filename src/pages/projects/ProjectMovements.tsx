@@ -1,16 +1,16 @@
 import { useState, type FormEvent } from "react";
 import { supabase } from "../../lib/supabase";
-import { MOVEMENT_KINDS, type Movement, type MovementKind } from "../../lib/projects";
+import { MOVEMENT_COLUMNS, MOVEMENT_KINDS, type Movement, type MovementKind } from "../../lib/projects";
 import { formatMoney, parseMoney } from "../../lib/sales";
 import { formatDate, todayISO } from "../../lib/subcontractors";
 import { Panel } from "../../components/Panel";
 import MoneyField from "../../components/MoneyField";
 import { AlertCircleIcon } from "../Icons";
 import { MovementKindTag } from "./projectTags";
-import type { AssignmentRow } from "./ProjectSubs";
+import type { AssignmentRow, WorkUpdate } from "./ProjectSubs";
 import { useT } from "../../i18n";
 
-type Props = { projectId: string; movements: Movement[]; assignments: AssignmentRow[]; onChange: () => Promise<void> };
+type Props = { projectId: string; movements: Movement[]; assignments: AssignmentRow[]; onChange: (update?: WorkUpdate) => Promise<void> };
 
 /** Every receipt from the client and every payment out (to subs or other expenses), newest first. */
 export default function ProjectMovements({ projectId, movements, assignments, onChange }: Props) {
@@ -29,7 +29,7 @@ export default function ProjectMovements({ projectId, movements, assignments, on
     const { error } = await supabase.from("project_movements").delete().eq("id", m.id);
     setPendingDelete(null);
     if (error) return setRowError(t.projects.deleteMovementFailed);
-    await onChange();
+    await onChange((w) => ({ ...w, movements: w.movements.filter((x) => x.id !== m.id) }));
   };
 
   const sorted = [...movements].sort((a, b) => b.occurred_on.localeCompare(a.occurred_on) || b.created_at.localeCompare(a.created_at));
@@ -50,9 +50,9 @@ export default function ProjectMovements({ projectId, movements, assignments, on
           projectId={projectId}
           assignments={assignments}
           onCancel={() => setAdding(false)}
-          onDone={async () => {
+          onDone={async (row) => {
             setAdding(false);
-            await onChange();
+            await onChange((w) => ({ ...w, movements: [...w.movements, row] }));
           }}
         />
       )}
@@ -131,7 +131,7 @@ function MovementForm({
   projectId: string;
   assignments: AssignmentRow[];
   onCancel: () => void;
-  onDone: () => void;
+  onDone: (row: Movement) => void;
 }) {
   const t = useT();
   const [kind, setKind] = useState<MovementKind>("receipt");
@@ -154,18 +154,22 @@ function MovementForm({
     setError(null);
     if (parsed === null || Number.isNaN(parsed) || parsed <= 0 || (kind === "sub_payment" && !assignmentId) || !date) return;
     setBusy(true);
-    const { error } = await supabase.from("project_movements").insert({
+    const { data, error } = await supabase
+      .from("project_movements")
+      .insert({
       project_id: projectId,
       kind,
       project_sub_id: kind === "sub_payment" ? assignmentId : null,
       amount: parsed,
       occurred_on: date,
       reference: reference.trim() || null,
-      notes: notes.trim() || null,
-    });
+        notes: notes.trim() || null,
+      })
+      .select(MOVEMENT_COLUMNS)
+      .single();
     setBusy(false);
-    if (error) return setError(t.projects.movementFailed);
-    onDone();
+    if (error || !data) return setError(t.projects.movementFailed);
+    onDone(data as Movement);
   };
 
   return (

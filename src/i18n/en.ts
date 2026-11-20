@@ -321,6 +321,7 @@ const en: Dict = {
     saveMovement: "Save movement",
     movementFailed: "We couldn't save the movement. Try again.",
     deleteMovementFailed: "We couldn't delete the movement.",
+    refreshFailed: "The change was saved, but we couldn't refresh the totals. Reload the page.",
     deleteMovementLabel: (kind: string, amount: string) => `Delete ${kind.toLowerCase()} of ${amount}`,
     newTitle: "New project",
     editTitle: "Edit project",

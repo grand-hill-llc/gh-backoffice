@@ -321,6 +321,7 @@ const es = {
     saveMovement: "Guardar movimiento",
     movementFailed: "No pudimos guardar el movimiento. Inténtalo de nuevo.",
     deleteMovementFailed: "No pudimos eliminar el movimiento.",
+    refreshFailed: "El cambio se guardó, pero no pudimos actualizar los totales. Recarga la página.",
     deleteMovementLabel: (kind: string, amount: string) => `Eliminar ${kind.toLowerCase()} de ${amount}`,
     newTitle: "Nuevo proyecto",
     editTitle: "Editar proyecto",

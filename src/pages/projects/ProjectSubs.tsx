@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
-import { paidToAssignment, type Movement, type ProjectSub } from "../../lib/projects";
+import { paidToAssignment, PROJECT_SUB_COLUMNS, type Movement, type ProjectSub } from "../../lib/projects";
 import { formatMoney, parseMoney } from "../../lib/sales";
 import { Panel } from "../../components/Panel";
 import MoneyField from "../../components/MoneyField";
@@ -10,13 +10,16 @@ import { useT } from "../../i18n";
 
 export type AssignmentRow = ProjectSub & { sub: { id: string; company_name: string } | null };
 export type SubOption = { id: string; company_name: string; status: string };
+export type Work = { assignments: AssignmentRow[]; movements: Movement[] };
+/** Local change to apply before the server re-read. */
+export type WorkUpdate = (w: Work) => Work;
 
 type Props = {
   projectId: string;
   assignments: AssignmentRow[];
   movements: Movement[];
   directory: SubOption[];
-  onChange: () => Promise<void>;
+  onChange: (update?: WorkUpdate) => Promise<void>;
 };
 
 /** Subcontractors assigned to the project: who, which trade, agreed amount and what has been paid. */
@@ -35,7 +38,7 @@ export default function ProjectSubs({ projectId, assignments, movements, directo
       return;
     }
     setPendingRemove(null);
-    await onChange();
+    await onChange((w) => ({ ...w, assignments: w.assignments.filter((x) => x.id !== a.id) }));
   };
 
   return (
@@ -54,9 +57,9 @@ export default function ProjectSubs({ projectId, assignments, movements, directo
           projectId={projectId}
           directory={directory}
           onCancel={() => setAdding(false)}
-          onDone={async () => {
+          onDone={async (row) => {
             setAdding(false);
-            await onChange();
+            await onChange((w) => ({ ...w, assignments: [...w.assignments, row] }));
           }}
         />
       )}
@@ -118,7 +121,7 @@ function AssignForm({
   projectId: string;
   directory: SubOption[];
   onCancel: () => void;
-  onDone: () => void;
+  onDone: (row: AssignmentRow) => void;
 }) {
   const t = useT();
   const [subId, setSubId] = useState("");
@@ -138,12 +141,14 @@ function AssignForm({
     setError(null);
     if (!subId || Number.isNaN(parsed)) return;
     setBusy(true);
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("project_subs")
-      .insert({ project_id: projectId, subcontractor_id: subId, trade: trade.trim() || null, agreed_amount: parsed });
+      .insert({ project_id: projectId, subcontractor_id: subId, trade: trade.trim() || null, agreed_amount: parsed })
+      .select(`${PROJECT_SUB_COLUMNS}, sub:subcontractors(id, company_name)`)
+      .single();
     setBusy(false);
-    if (error) return setError(t.projects.assignFailed);
-    onDone();
+    if (error || !data) return setError(t.projects.assignFailed);
+    onDone(data as unknown as AssignmentRow);
   };
 
   if (directory.length === 0)

@@ -10,4 +10,7 @@ if (!url || !anonKey) {
 }
 
 // Publishable (anon) key only. Data access is protected by Row Level Security in the database.
-export const supabase = createClient(url, anonKey);
+// Reads must always reflect the latest writes, so the browser HTTP cache is bypassed for every request.
+export const supabase = createClient(url, anonKey, {
+  global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) },
+});
