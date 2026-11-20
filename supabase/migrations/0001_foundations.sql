@@ -251,8 +251,12 @@ from auth.users
 where lower(email) = 'adriangerig@gmail.com'
 on conflict (id) do update set role = excluded.role, full_name = excluded.full_name;
 
--- Adiel (admin): create his login in Authentication > Users first, then run:
---   insert into public.profiles (id, email, full_name, role)
---   select id, email, 'Julio Adiel Canelo', 'admin' from auth.users where lower(email) = 'ADIEL_EMAIL_HERE';
+-- Adiel (admin). Same rule: if his auth user does not exist yet this inserts nothing,
+-- so create his login in Authentication > Users and re-run this single statement.
+insert into public.profiles (id, email, full_name, role)
+select id, email, 'Julio Adiel Canelo', 'admin'
+from auth.users
+where lower(email) = 'adiel.canelo@gmail.com'
+on conflict (id) do update set role = excluded.role, full_name = excluded.full_name;
 
 commit;
