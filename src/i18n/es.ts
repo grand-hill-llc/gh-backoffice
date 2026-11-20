@@ -1,5 +1,10 @@
 // Spanish (source dictionary). en.ts must have exactly the same shape: TypeScript fails the build otherwise.
 
+/** ["correo", "teléfono", "ubicación"] -> "correo, teléfono ni ubicación". */
+function listEs(items: string[]): string {
+  return items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} ni ${items[items.length - 1]}`;
+}
+
 const es = {
   locale: "es-US",
   common: {
@@ -14,6 +19,8 @@ const es = {
     no: "No",
     signOut: "Cerrar sesión",
     none: "—",
+    missingDetails: (labels: string[]) => `Sin ${listEs(labels)}.`,
+    completeDetails: "Completar",
   },
   prefs: {
     theme: "Tema",

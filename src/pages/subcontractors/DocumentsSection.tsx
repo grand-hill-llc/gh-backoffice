@@ -12,6 +12,7 @@ import {
 } from "../../lib/subcontractors";
 import { AlertCircleIcon } from "../Icons";
 import { ValidityTag } from "./tags";
+import { Panel } from "../../components/Panel";
 import { useT } from "../../i18n";
 
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -52,15 +53,16 @@ export default function DocumentsSection({ subId, docs, onChange }: Props) {
   };
 
   return (
-    <section className="panel">
-      <div className="panel-head">
-        <h2 className="panel-title gh-label">{t.subs.documents}</h2>
-        {!adding && (
+    <Panel
+      title={t.subs.documents}
+      action={
+        !adding && (
           <button className="gh-btn gh-btn-secondary gh-btn-sm" type="button" onClick={() => setAdding(true)}>
             {t.subs.addDocument}
           </button>
-        )}
-      </div>
+        )
+      }
+    >
 
       {adding && (
         <UploadForm
@@ -81,7 +83,7 @@ export default function DocumentsSection({ subId, docs, onChange }: Props) {
       )}
 
       {docs.length === 0 ? (
-        !adding && <p className="gh-muted panel-empty">{t.subs.noDocuments}</p>
+        !adding && <p className="panel-empty">{t.subs.noDocuments}</p>
       ) : (
         <ul className="doc-list">
           {docs.map((d) => (
@@ -123,7 +125,7 @@ export default function DocumentsSection({ subId, docs, onChange }: Props) {
           ))}
         </ul>
       )}
-    </section>
+    </Panel>
   );
 }
 

@@ -2,6 +2,11 @@ import type { Dict } from "./es";
 
 // English. Typed against the Spanish dictionary: a missing or extra key fails the build.
 
+/** ["email", "phone", "location"] -> "email, phone or location". */
+function listEn(items: string[]): string {
+  return items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} or ${items[items.length - 1]}`;
+}
+
 const en: Dict = {
   locale: "en-US",
   common: {
@@ -16,6 +21,8 @@ const en: Dict = {
     no: "No",
     signOut: "Sign out",
     none: "—",
+    missingDetails: (labels: string[]) => `No ${listEn(labels)}.`,
+    completeDetails: "Complete",
   },
   prefs: {
     theme: "Theme",

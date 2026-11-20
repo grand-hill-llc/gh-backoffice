@@ -5,7 +5,7 @@ import { BID_COLUMNS, BID_STATUSES, formatMoney, formatPct, marginOf, type Bid, 
 import { formatDate, todayISO } from "../../lib/subcontractors";
 import DeleteZone from "../../components/DeleteZone";
 import { AlertCircleIcon } from "../Icons";
-import { Fact } from "../clients/ClientDetail";
+import { Facts, NoteBlock, Panel } from "../../components/Panel";
 import { DueNote } from "./bidTags";
 import { useT } from "../../i18n";
 
@@ -144,23 +144,19 @@ export default function BidDetail() {
       </div>
 
       <div className="detail-grid">
-        <section className="panel">
-          <h2 className="panel-title gh-label">{t.sales.details}</h2>
-          <dl className="facts">
-            <Fact label={t.sales.location} value={bid.location} />
-            <Fact label={t.sales.createdOn} value={formatDate(bid.created_at, t.locale)} />
-          </dl>
-        </section>
-        <section className="panel">
-          <h2 className="panel-title gh-label">{t.sales.scope}</h2>
-          {bid.scope ? <p className="facts-notes">{bid.scope}</p> : <p className="gh-muted panel-empty">—</p>}
-          {bid.notes && (
-            <>
-              <h3 className="gh-label facts-notes-label">{t.sales.notes}</h3>
-              <p className="facts-notes">{bid.notes}</p>
-            </>
-          )}
-        </section>
+        <Panel title={t.sales.details}>
+          <Facts
+            completeHref={`/bids/${bid.id}/editar`}
+            items={[
+              { label: t.sales.location, value: bid.location },
+              { label: t.sales.createdOn, value: formatDate(bid.created_at, t.locale) },
+            ]}
+          />
+        </Panel>
+        <Panel title={t.sales.scope}>
+          {bid.scope ? <p className="panel-text">{bid.scope}</p> : <p className="panel-empty">—</p>}
+          {bid.notes && <NoteBlock title={t.sales.notes} text={bid.notes} />}
+        </Panel>
       </div>
 
       <DeleteZone
