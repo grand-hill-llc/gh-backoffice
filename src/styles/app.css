@@ -101,7 +101,7 @@
 .dash-date { font-size: 14px; font-variant-numeric: tabular-nums; }
 .dash-item.is-urgent .dash-date { color: var(--danger); font-weight: 500; }
 .dash-more { padding-top: 12px; border-top: var(--stroke-hairline) solid var(--line); }
-.collected-cell { display: inline-flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.collected-cell { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-variant-numeric: tabular-nums; }
 .collected-cell .progress { width: 72px; }
 
 /* Dark scheme: sidebar and alt surface are the same tone, so the content area uses the base surface. */
@@ -481,3 +481,46 @@
 .team-table .team-detail .upload-form, .team-table .team-detail .confirm-box { max-width: 640px; }
 .team-note { margin: var(--space-3) 0 0; max-width: 640px; }
 .text-btn[disabled] { opacity: .5; cursor: default; }
+
+/* ================================================================
+   Leads
+   ================================================================ */
+
+.source-label { white-space: nowrap; }
+
+/* Next follow-up strip on the lead page */
+.follow-up-bar {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3); padding: var(--space-2) var(--space-3);
+  background: var(--surface-raised); border: var(--stroke-hairline) solid var(--line);
+}
+.follow-up-main { display: grid; gap: 2px; }
+.follow-up-main p { margin: 0; }
+.follow-up-date { font-family: var(--font-display); font-size: 26px; line-height: 1.2; font-weight: 300; letter-spacing: -0.01em; }
+.follow-up-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-2); }
+.follow-up-input { width: auto; height: 40px; }
+
+.lost-reason { max-width: 640px; margin-bottom: var(--space-3); }
+
+.wa-link { justify-self: start; }
+
+/* Activity timeline */
+.activity-kinds { max-width: none; flex-wrap: wrap; }
+.activity-kinds button { flex: 1 1 auto; }
+.timeline { list-style: none; margin: 0; padding: 0; }
+.timeline-item { position: relative; padding: 0 0 var(--space-3) var(--space-3); border-left: var(--stroke-hairline) solid var(--line); }
+.timeline-item:last-child { padding-bottom: 0; border-left-color: transparent; }
+.timeline-item::before { content: ""; position: absolute; left: -5px; top: 6px; width: 9px; height: 9px; background: var(--surface-raised); border: var(--stroke-rule) solid var(--line-strong); }
+.timeline-item.is-call::before, .timeline-item.is-meeting::before { border-color: var(--ink); background: var(--ink); }
+.timeline-item.is-message::before, .timeline-item.is-email::before { border-color: var(--ink); }
+.timeline-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--space-2); font-size: 13px; }
+.timeline-kind { font-weight: 600; letter-spacing: .12em; text-transform: uppercase; font-size: 12px; }
+.timeline-head time { color: var(--ink-muted); }
+.timeline-text { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.timeline-actions { margin-top: 4px; display: flex; gap: var(--space-2); }
+.timeline-actions .text-btn { font-size: 11px; color: var(--ink-muted); }
+.timeline-actions .text-btn.is-danger { color: var(--danger); }
+
+@media (max-width: 720px) {
+  .follow-up-bar { padding: var(--space-2); }
+}

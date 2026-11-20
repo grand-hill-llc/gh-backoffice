@@ -8,7 +8,9 @@ import { PageHeader, Tag, type TagTone } from "../components/ui";
 import { Panel } from "../components/Panel";
 import { AlertCircleIcon } from "./Icons";
 import { DueNote } from "./bids/bidTags";
-import { CollectedBar, ProjectStatusTag } from "./projects/projectTags";
+import { CollectedBar } from "./projects/projectTags";
+import { FOLLOW_UP_SOON_DAYS, OPEN_LEAD_STATUSES, addDays, ownerName, type Lead, type Owner } from "../lib/leads";
+import { FollowUpNote } from "./leads/leadShared";
 import { useT } from "../i18n";
 
 const LIST_LIMIT = 6;
@@ -54,6 +56,25 @@ async function loadPipeline(): Promise<Pipeline> {
   return { openBids: (bids.data ?? []) as unknown as BidRow[], docIssues, subsWithIssues: affected.size };
 }
 
+type FollowUpRow = Pick<Lead, "id" | "name" | "company" | "status" | "next_follow_up" | "owner_id">;
+type FollowUps = { rows: FollowUpRow[]; owners: Owner[] };
+
+/** Open leads whose next follow-up is overdue or within the next few days. */
+async function loadFollowUps(): Promise<FollowUps> {
+  const [l, o] = await Promise.all([
+    supabase
+      .from("leads")
+      .select("id, name, company, status, next_follow_up, owner_id")
+      .in("status", OPEN_LEAD_STATUSES)
+      .lte("next_follow_up", addDays(todayISO(), FOLLOW_UP_SOON_DAYS))
+      .order("next_follow_up"),
+    supabase.from("profiles").select("id, full_name, email").in("role", ["super_admin", "admin"]),
+  ]);
+  const err = l.error ?? o.error;
+  if (err) throw err;
+  return { rows: (l.data ?? []) as FollowUpRow[], owners: (o.data ?? []) as Owner[] };
+}
+
 /** Projects that aren't closed: what is left to collect from clients and to pay to subs. */
 async function loadWork(): Promise<Work> {
   const [p, a, m] = await Promise.all([
@@ -96,6 +117,8 @@ export default function Dashboard() {
   const [pipelineState, setPipelineState] = useState<LoadState>("loading");
   const [work, setWork] = useState<Work | null>(null);
   const [workState, setWorkState] = useState<LoadState>("loading");
+  const [followUps, setFollowUps] = useState<FollowUps | null>(null);
+  const [followUpsState, setFollowUpsState] = useState<LoadState>("loading");
 
   useEffect(() => {
     let active = true;
@@ -117,6 +140,13 @@ export default function Dashboard() {
         setWorkState("ready");
       })
       .catch(fail(setWorkState));
+    loadFollowUps()
+      .then((f) => {
+        if (!active) return;
+        setFollowUps(f);
+        setFollowUpsState("ready");
+      })
+      .catch(fail(setFollowUpsState));
     return () => {
       active = false;
     };
@@ -164,6 +194,36 @@ export default function Dashboard() {
       </div>
 
       <div className="detail-grid dashboard-grid">
+        <Panel title={t.dashboard.followUps} action={<SeeAll to="/leads" />}>
+          {followUpsState === "missing" ? (
+            <p className="panel-empty">{t.dashboard.followUpsMissing}</p>
+          ) : !followUps ? (
+            <Loading state={followUpsState} />
+          ) : followUps.rows.length === 0 ? (
+            <p className="panel-empty">{t.dashboard.followUpsEmpty}</p>
+          ) : (
+            <ul className="dash-list">
+              {followUps.rows.slice(0, LIST_LIMIT).map((l) => (
+                <li key={l.id} className="dash-item">
+                  <div className="dash-main">
+                    <Link className="row-link" to={`/leads/${l.id}`}>{l.name}</Link>
+                    <span className="cell-sub">
+                      {[l.company, l.owner_id ? ownerName(followUps.owners.find((o) => o.id === l.owner_id)) : t.leads.unassigned]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </div>
+                  <div className="dash-side">
+                    <span className="dash-date">{l.next_follow_up ? formatDate(l.next_follow_up, t.locale) : ""}</span>
+                    <FollowUpNote lead={l} today={today} />
+                  </div>
+                </li>
+              ))}
+              <More count={followUps.rows.length - LIST_LIMIT} />
+            </ul>
+          )}
+        </Panel>
+
         <Panel title={t.dashboard.bidsDue} action={<SeeAll to="/bids" />}>
           {!pipeline ? (
             <Loading state={pipelineState} />
@@ -216,9 +276,7 @@ export default function Dashboard() {
             </ul>
           )}
         </Panel>
-      </div>
 
-      <div className="detail-stack">
         <Panel title={t.dashboard.activeProjects} action={<SeeAll to="/proyectos" />}>
           {workState === "missing" ? (
             <p className="panel-empty">{t.dashboard.projectsMissing}</p>
@@ -232,27 +290,20 @@ export default function Dashboard() {
                 <thead>
                   <tr>
                     <th scope="col">{t.dashboard.colProject}</th>
-                    <th scope="col">{t.dashboard.colStatus}</th>
-                    <th scope="col">{t.dashboard.colCollected}</th>
                     <th scope="col" className="num">{t.dashboard.colToCollect}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {work.active.map((p) => (
                     <tr key={p.id}>
-                      <td className="col-company">
+                      <td>
                         <Link className="row-link" to={`/proyectos/${p.id}`}>{p.name}</Link>
                         <span className="cell-sub">{p.client?.name ?? t.projects.noClient}</span>
-                      </td>
-                      <td><ProjectStatusTag status={p.status} /></td>
-                      <td className="nowrap">
-                        {p.collectedShare !== null ? (
+                        {p.collectedShare !== null && (
                           <span className="collected-cell">
                             <CollectedBar share={p.collectedShare} />
-                            <span>{formatPct(p.collectedShare, t.locale)}</span>
+                            <span className="gh-small gh-muted">{t.projects.collected(formatPct(p.collectedShare, t.locale))}</span>
                           </span>
-                        ) : (
-                          <span className="gh-muted">—</span>
                         )}
                       </td>
                       <td className="num">{p.toCollect !== null ? money(Math.max(0, p.toCollect)) : "—"}</td>

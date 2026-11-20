@@ -34,6 +34,7 @@ npm run dev
 
 1. En Supabase abre **SQL Editor**, pega el contenido de `supabase/migrations/0001_foundations.sql` y ejecútalo (una sola vez).
    Después haz lo mismo con `supabase/migrations/0002_projects.sql` (proyectos, subcontratistas asignados y movimientos).
+   Y luego con `supabase/migrations/0003_leads.sql` (leads, responsables, seguimientos y actividad).
 2. Despliega la función de gestión de usuarios (ver abajo). Desde ese momento, un super admin invita, cambia roles y quita accesos en **Equipo** (`/equipo`), sin entrar a Supabase.
 
 | Rol | Acceso |
@@ -70,7 +71,7 @@ Sin la función desplegada, **Equipo** sigue mostrando los roles y permite cambi
 - `/login` inicio de sesión y recuperación de contraseña
 - `/restablecer` destino del enlace del correo de recuperación
 - `/` redirige según el rol
-- `/dashboard`, `/bids`, `/clientes`, `/subcontratistas`, `/proyectos` personal interno (super admin y admin), cada uno con `/nuevo`, `/:id` y `/:id/editar`
+- `/dashboard`, `/leads`, `/bids`, `/clientes`, `/subcontratistas`, `/proyectos` personal interno (super admin y admin), cada uno con `/nuevo`, `/:id` y `/:id/editar`
 - `/proyectos/nuevo?bid=<id>` crea un proyecto copiando los datos de un bid ganado
 - `/equipo` solo super admin
 - `/portal` solo subcontratistas

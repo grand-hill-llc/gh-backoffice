@@ -2,12 +2,13 @@ export type Role = "super_admin" | "admin" | "subcontractor";
 
 export const STAFF: Role[] = ["super_admin", "admin"];
 
-export type NavKey = "dashboard" | "bids" | "clients" | "subcontractors" | "projects" | "team" | "portal";
+export type NavKey = "dashboard" | "leads" | "bids" | "clients" | "subcontractors" | "projects" | "team" | "portal";
 export type NavItem = { to: string; key: NavKey; roles: Role[] };
 
 /** Sidebar entries (labels in i18n nav.*). Visibility here is convenience only: the database (RLS) is what enforces access. */
 export const NAV: NavItem[] = [
   { to: "/dashboard", key: "dashboard", roles: STAFF },
+  { to: "/leads", key: "leads", roles: STAFF },
   { to: "/bids", key: "bids", roles: STAFF },
   { to: "/clientes", key: "clients", roles: STAFF },
   { to: "/subcontratistas", key: "subcontractors", roles: STAFF },

@@ -7,6 +7,9 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Portal from "./pages/Portal";
 import ResetPassword from "./pages/ResetPassword";
+import LeadDetail from "./pages/leads/LeadDetail";
+import LeadForm from "./pages/leads/LeadForm";
+import LeadList from "./pages/leads/LeadList";
 import ProjectDetail from "./pages/projects/ProjectDetail";
 import ProjectForm from "./pages/projects/ProjectForm";
 import ProjectList from "./pages/projects/ProjectList";
@@ -40,6 +43,10 @@ export default function App() {
 
               <Route element={<RequireRole allow={STAFF} />}>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/leads" element={<LeadList />} />
+                <Route path="/leads/nuevo" element={<LeadForm />} />
+                <Route path="/leads/:id" element={<LeadDetail />} />
+                <Route path="/leads/:id/editar" element={<LeadForm />} />
                 <Route path="/bids" element={<BidList />} />
                 <Route path="/bids/nuevo" element={<BidForm />} />
                 <Route path="/bids/:id" element={<BidDetail />} />
