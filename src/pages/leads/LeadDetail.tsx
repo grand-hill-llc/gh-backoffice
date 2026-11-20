@@ -133,6 +133,14 @@ export default function LeadDetail() {
         <div className="detail-title-row">
           <h1 className="gh-h2">{lead.name}</h1>
           <div className="detail-actions">
+            {isOpen && (
+              <Link
+                className={`gh-btn gh-btn-sm ${lead.status === "qualified" ? "gh-btn-primary" : "gh-btn-secondary"}`}
+                to={`/leads/${lead.id}/convertir`}
+              >
+                {t.leads.convert}
+              </Link>
+            )}
             <Link className="gh-btn gh-btn-secondary gh-btn-sm" to={`/leads/${lead.id}/editar`}>{t.common.edit}</Link>
           </div>
         </div>
@@ -149,6 +157,8 @@ export default function LeadDetail() {
         <section className="status-bar">
           <LeadStatusTag status="converted" />
           <span className="gh-small gh-muted">{t.leads.convertedNote}</span>
+          {lead.client_id && <Link className="meta-link" to={`/clientes/${lead.client_id}`}>{t.leads.viewClient}</Link>}
+          {lead.bid_id && <Link className="meta-link" to={`/bids/${lead.bid_id}`}>{t.leads.viewBid}</Link>}
         </section>
       ) : (
         <section className="status-bar" aria-labelledby="lead-stage-label">

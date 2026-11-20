@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Portal from "./pages/Portal";
 import ResetPassword from "./pages/ResetPassword";
+import LeadConvert from "./pages/leads/LeadConvert";
 import LeadDetail from "./pages/leads/LeadDetail";
 import LeadForm from "./pages/leads/LeadForm";
 import LeadList from "./pages/leads/LeadList";
@@ -47,6 +48,7 @@ export default function App() {
                 <Route path="/leads/nuevo" element={<LeadForm />} />
                 <Route path="/leads/:id" element={<LeadDetail />} />
                 <Route path="/leads/:id/editar" element={<LeadForm />} />
+                <Route path="/leads/:id/convertir" element={<LeadConvert />} />
                 <Route path="/bids" element={<BidList />} />
                 <Route path="/bids/nuevo" element={<BidForm />} />
                 <Route path="/bids/:id" element={<BidDetail />} />

@@ -35,6 +35,7 @@ npm run dev
 1. En Supabase abre **SQL Editor**, pega el contenido de `supabase/migrations/0001_foundations.sql` y ejecútalo (una sola vez).
    Después haz lo mismo con `supabase/migrations/0002_projects.sql` (proyectos, subcontratistas asignados y movimientos).
    Y luego con `supabase/migrations/0003_leads.sql` (leads, responsables, seguimientos y actividad).
+   Por último `supabase/migrations/0004_convert_lead.sql` (convierte un lead en cliente + bid en una sola transacción).
 2. Despliega la función de gestión de usuarios (ver abajo). Desde ese momento, un super admin invita, cambia roles y quita accesos en **Equipo** (`/equipo`), sin entrar a Supabase.
 
 | Rol | Acceso |
