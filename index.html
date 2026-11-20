@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <script>
+      // Apply the saved theme and language before first paint (mirrors src/lib/prefs.tsx).
+      try {
+        var t = localStorage.getItem("gh-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        var l = localStorage.getItem("gh-lang");
+        if (l === "es" || l === "en") document.documentElement.lang = l;
+      } catch (e) {}
+    </script>
     <title>Grand Hill · Back Office</title>
   </head>
   <body>

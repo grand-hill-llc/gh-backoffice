@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
-import { NAV, ROLE_LABEL } from "../lib/roles";
+import { Logo } from "../components/ui";
+import UserMenu from "./UserMenu";
+import { useT } from "../i18n";
+import { NAV } from "../lib/roles";
 
 export default function AppLayout() {
   const { profile, session, signOut } = useAuth();
+  const t = useT();
   const [open, setOpen] = useState(false);
   if (!profile) return null;
 
@@ -14,7 +18,7 @@ export default function AppLayout() {
   return (
     <div className="app gh">
       <div className="app-topbar gh-inverse">
-        <span className="gh-wordmark">Grand Hill</span>
+        <Logo surface="inverse" height={28} />
         <button
           className="gh-btn gh-btn-secondary gh-btn-sm"
           type="button"
@@ -22,21 +26,21 @@ export default function AppLayout() {
           aria-controls="sidebar"
           onClick={() => setOpen((v) => !v)}
         >
-          {open ? "Cerrar" : "Menú"}
+          {open ? t.nav.close : t.nav.menu}
         </button>
       </div>
 
       <aside id="sidebar" className={`sidebar gh-inverse${open ? " is-open" : ""}`}>
         <div className="sidebar-top">
-          <span className="gh-wordmark sidebar-mark">Grand Hill</span>
-          <p className="gh-label sidebar-label">Back Office</p>
-          <nav aria-label="Principal">
+          <Logo surface="inverse" height={34} className="sidebar-mark" />
+          <p className="gh-label sidebar-label">{t.common.backOffice}</p>
+          <nav aria-label={t.nav.main}>
             <ul className="nav-list">
               {items.map((item) => (
                 <li key={item.to}>
                   <NavLink to={item.to} className="nav-link" onClick={() => setOpen(false)}>
                     <span className="gh-square nav-dot" aria-hidden="true" />
-                    {item.label}
+                    {t.nav[item.key]}
                   </NavLink>
                 </li>
               ))}
@@ -44,13 +48,7 @@ export default function AppLayout() {
           </nav>
         </div>
 
-        <div className="sidebar-user">
-          <p className="sidebar-user-name">{who}</p>
-          <p className="gh-label">{ROLE_LABEL[profile.role]}</p>
-          <button className="gh-btn gh-btn-secondary gh-btn-sm" type="button" onClick={signOut}>
-            Cerrar sesión
-          </button>
-        </div>
+        <UserMenu name={who} role={t.roles[profile.role]} onSignOut={signOut} />
       </aside>
 
       <main className="app-main">

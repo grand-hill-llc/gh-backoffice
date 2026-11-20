@@ -2,15 +2,15 @@ import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import {
-  COMMON_TRADES,
-  STATUS_LABEL,
   STATUSES,
+  TRADE_KEYS,
   SUB_COLUMNS,
   type SubStatus,
   type Subcontractor,
 } from "../../lib/subcontractors";
 import { PageHeader } from "../../components/ui";
 import { AlertCircleIcon } from "../Icons";
+import { normalizeTrade, tradeLabel, useT } from "../../i18n";
 
 type Values = {
   company_name: string;
@@ -45,6 +45,7 @@ export default function SubcontractorForm() {
   const { id } = useParams();
   const editing = !!id;
   const navigate = useNavigate();
+  const t = useT();
 
   const [values, setValues] = useState<Values>(EMPTY);
   const [loading, setLoading] = useState(editing);
@@ -73,7 +74,8 @@ export default function SubcontractorForm() {
         setValues({
           company_name: s.company_name,
           legal_name: s.legal_name ?? "",
-          trades: s.trades ?? [],
+          // Legacy rows may hold Spanish labels ("Pintura"); store keys from now on.
+          trades: Array.from(new Set((s.trades ?? []).map(normalizeTrade))),
           contact_name: s.contact_name ?? "",
           email: s.email ?? "",
           phone: s.phone ?? "",
@@ -90,15 +92,16 @@ export default function SubcontractorForm() {
 
   const set = <K extends keyof Values>(key: K, value: Values[K]) => setValues((v) => ({ ...v, [key]: value }));
 
-  const nameError = touched && !values.company_name.trim() ? "El nombre de la empresa es obligatorio." : null;
-  const emailError = touched && values.email.trim() && !EMAIL_RE.test(values.email.trim()) ? "Revisa el formato del correo." : null;
+  const nameError = touched && !values.company_name.trim() ? t.subs.companyRequired : null;
+  const emailError = touched && values.email.trim() && !EMAIL_RE.test(values.email.trim()) ? t.subs.emailInvalid : null;
 
   const toggleTrade = (trade: string) =>
     set("trades", values.trades.includes(trade) ? values.trades.filter((t) => t !== trade) : [...values.trades, trade]);
 
   const addDraftTrade = () => {
-    const t = tradeDraft.trim();
-    if (t && !values.trades.some((x) => x.toLowerCase() === t.toLowerCase())) set("trades", [...values.trades, t]);
+    const draft = tradeDraft.trim();
+    const value = draft ? normalizeTrade(draft) : "";
+    if (value && !values.trades.some((x) => x.toLowerCase() === value.toLowerCase())) set("trades", [...values.trades, value]);
     setTradeDraft("");
   };
 
@@ -136,37 +139,37 @@ export default function SubcontractorForm() {
     setBusy(false);
 
     if (result.error || !result.data) {
-      setError("No pudimos guardar los cambios. Inténtalo de nuevo.");
+      setError(t.subs.saveFailed);
       return;
     }
     navigate(`/subcontratistas/${result.data.id}`, { replace: editing });
   };
 
   const backTo = editing ? `/subcontratistas/${id}` : "/subcontratistas";
-  const extraTrades = values.trades.filter((t) => !COMMON_TRADES.includes(t));
+  const extraTrades = values.trades.filter((tr) => !(TRADE_KEYS as readonly string[]).includes(tr));
 
-  if (loading) return <p className="gh-muted" role="status">Cargando…</p>;
+  if (loading) return <p className="gh-muted" role="status">{t.common.loading}</p>;
   if (loadFailed)
     return (
       <div className="gh-notice is-error" role="alert">
         <AlertCircleIcon />
         <p>
-          No encontramos este subcontratista. <Link to="/subcontratistas">Volver al directorio</Link>
+          {t.subs.notFound} <Link to="/subcontratistas">{t.subs.backToList}</Link>
         </p>
       </div>
     );
 
   return (
     <>
-      <Link className="back-link" to={backTo}>← {editing ? values.company_name || "Subcontratista" : "Subcontratistas"}</Link>
-      <PageHeader eyebrow="Subcontratistas" title={editing ? "Editar subcontratista" : "Nuevo subcontratista"} />
+      <Link className="back-link" to={backTo}>← {editing ? values.company_name || t.subs.one : t.subs.title}</Link>
+      <PageHeader title={editing ? t.subs.editTitle : t.subs.newTitle} />
 
       <form className="gh-form panel-form" onSubmit={onSubmit} noValidate>
         <fieldset className="form-section">
-          <legend className="gh-label">Empresa</legend>
+          <legend className="gh-label">{t.subs.sectionCompany}</legend>
           <div className="form-grid">
             <div className={`gh-field span-2${nameError ? " is-error" : ""}`}>
-              <label className="gh-field-label" htmlFor="company_name">Nombre comercial *</label>
+              <label className="gh-field-label" htmlFor="company_name">{t.subs.companyName}</label>
               <input
                 id="company_name"
                 className="gh-input"
@@ -180,15 +183,15 @@ export default function SubcontractorForm() {
               {nameError && <p className="gh-error" id="company_name-error">{nameError}</p>}
             </div>
             <div className="gh-field span-2">
-              <label className="gh-field-label" htmlFor="legal_name">Razón social</label>
+              <label className="gh-field-label" htmlFor="legal_name">{t.subs.legalName}</label>
               <input id="legal_name" className="gh-input" value={values.legal_name} onChange={(e) => set("legal_name", e.target.value)} />
-              <p className="gh-help">Como aparece en el W-9, si es distinta al nombre comercial.</p>
+              <p className="gh-help">{t.subs.legalNameHelp}</p>
             </div>
             <div className="gh-field">
-              <label className="gh-field-label" htmlFor="status">Estado</label>
+              <label className="gh-field-label" htmlFor="status">{t.subs.status}</label>
               <select id="status" className="gh-input gh-select" value={values.status} onChange={(e) => set("status", e.target.value as SubStatus)}>
                 {STATUSES.map((s) => (
-                  <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                  <option key={s} value={s}>{t.subs.statuses[s]}</option>
                 ))}
               </select>
             </div>
@@ -196,52 +199,52 @@ export default function SubcontractorForm() {
         </fieldset>
 
         <fieldset className="form-section">
-          <legend className="gh-label">Oficios</legend>
-          <div className="chip-group" role="group" aria-label="Oficios frecuentes">
-            {COMMON_TRADES.map((t) => (
+          <legend className="gh-label">{t.subs.sectionTrades}</legend>
+          <div className="chip-group" role="group" aria-label={t.subs.commonTrades}>
+            {TRADE_KEYS.map((key) => (
               <button
-                key={t}
+                key={key}
                 type="button"
                 className="chip"
-                aria-pressed={values.trades.includes(t)}
-                onClick={() => toggleTrade(t)}
+                aria-pressed={values.trades.includes(key)}
+                onClick={() => toggleTrade(key)}
               >
-                {t}
+                {t.subs.trades[key]}
               </button>
             ))}
-            {extraTrades.map((t) => (
-              <button key={t} type="button" className="chip" aria-pressed onClick={() => toggleTrade(t)} aria-label={`Quitar ${t}`}>
-                {t} ×
+            {extraTrades.map((tr) => (
+              <button key={tr} type="button" className="chip" aria-pressed onClick={() => toggleTrade(tr)} aria-label={t.subs.removeTrade(tradeLabel(tr, t))}>
+                {tradeLabel(tr, t)} ×
               </button>
             ))}
           </div>
           <div className="gh-field trade-add">
-            <label className="gh-field-label" htmlFor="trade-draft">Otro oficio</label>
+            <label className="gh-field-label" htmlFor="trade-draft">{t.subs.otherTrade}</label>
             <div className="input-row">
               <input
                 id="trade-draft"
                 className="gh-input"
-                placeholder="Escribe y presiona Enter"
+                placeholder={t.subs.otherTradePlaceholder}
                 value={tradeDraft}
                 onChange={(e) => setTradeDraft(e.target.value)}
                 onKeyDown={onTradeKey}
               />
               <button className="gh-btn gh-btn-secondary" type="button" onClick={addDraftTrade} disabled={!tradeDraft.trim()}>
-                Agregar
+                {t.subs.add}
               </button>
             </div>
           </div>
         </fieldset>
 
         <fieldset className="form-section">
-          <legend className="gh-label">Contacto</legend>
+          <legend className="gh-label">{t.subs.sectionContact}</legend>
           <div className="form-grid">
             <div className="gh-field span-2">
-              <label className="gh-field-label" htmlFor="contact_name">Persona de contacto</label>
+              <label className="gh-field-label" htmlFor="contact_name">{t.subs.contactName}</label>
               <input id="contact_name" className="gh-input" autoComplete="off" value={values.contact_name} onChange={(e) => set("contact_name", e.target.value)} />
             </div>
             <div className={`gh-field${emailError ? " is-error" : ""}`}>
-              <label className="gh-field-label" htmlFor="email">Correo</label>
+              <label className="gh-field-label" htmlFor="email">{t.subs.email}</label>
               <input
                 id="email"
                 className="gh-input"
@@ -256,26 +259,26 @@ export default function SubcontractorForm() {
               {emailError && <p className="gh-error" id="email-error">{emailError}</p>}
             </div>
             <div className="gh-field">
-              <label className="gh-field-label" htmlFor="phone">Teléfono</label>
+              <label className="gh-field-label" htmlFor="phone">{t.subs.phone}</label>
               <input id="phone" className="gh-input" type="tel" inputMode="tel" autoComplete="off" value={values.phone} onChange={(e) => set("phone", e.target.value)} />
             </div>
             <div className="gh-field">
-              <label className="gh-field-label" htmlFor="city">Ciudad</label>
+              <label className="gh-field-label" htmlFor="city">{t.subs.city}</label>
               <input id="city" className="gh-input" value={values.city} onChange={(e) => set("city", e.target.value)} />
             </div>
             <div className="gh-field">
-              <label className="gh-field-label" htmlFor="state">Estado (EE. UU.)</label>
+              <label className="gh-field-label" htmlFor="state">{t.subs.state}</label>
               <input id="state" className="gh-input" maxLength={2} value={values.state} onChange={(e) => set("state", e.target.value)} />
             </div>
           </div>
         </fieldset>
 
         <fieldset className="form-section">
-          <legend className="gh-label">Notas</legend>
+          <legend className="gh-label">{t.subs.notes}</legend>
           <div className="gh-field">
-            <label className="gh-field-label visually-hidden" htmlFor="notes">Notas</label>
+            <label className="gh-field-label visually-hidden" htmlFor="notes">{t.subs.notes}</label>
             <textarea id="notes" className="gh-input gh-textarea" rows={4} value={values.notes} onChange={(e) => set("notes", e.target.value)} />
-            <p className="gh-help">Visible solo para el equipo interno.</p>
+            <p className="gh-help">{t.subs.notesHelp}</p>
           </div>
         </fieldset>
 
@@ -288,9 +291,9 @@ export default function SubcontractorForm() {
 
         <div className="form-actions">
           <button className="gh-btn gh-btn-primary" type="submit" disabled={busy}>
-            {busy ? "Guardando…" : editing ? "Guardar cambios" : "Crear subcontratista"}
+            {busy ? t.common.saving : editing ? t.subs.saveChanges : t.subs.create}
           </button>
-          <Link className="gh-link" to={backTo}>Cancelar</Link>
+          <Link className="gh-link" to={backTo}>{t.common.cancel}</Link>
         </div>
       </form>
     </>

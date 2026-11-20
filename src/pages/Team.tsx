@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { ROLE_LABEL, type Role } from "../lib/roles";
+import { type Role } from "../lib/roles";
+import { useT } from "../i18n";
 import { EmptyState, PageHeader } from "../components/ui";
 
 type Row = { id: string; full_name: string | null; email: string | null; role: Role };
 
 /** Read-only list of who has access. Roles are changed in Supabase until an editor is built. */
 export default function Team() {
+  const t = useT();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -28,19 +30,19 @@ export default function Team() {
 
   return (
     <>
-      <PageHeader eyebrow="Administración" title="Equipo" description="Quién tiene acceso al sistema y con qué rol." />
+      <PageHeader eyebrow={t.team.eyebrow} title={t.nav.team} description={t.team.description} />
       {failed ? (
-        <EmptyState title="No pudimos cargar el equipo">Inténtalo de nuevo en unos minutos.</EmptyState>
+        <EmptyState title={t.team.loadFailedTitle}>{t.team.loadFailedBody}</EmptyState>
       ) : !rows ? (
-        <p className="gh-muted" role="status">Cargando…</p>
+        <p className="gh-muted" role="status">{t.common.loading}</p>
       ) : (
         <div className="table-wrap">
           <table className="gh-table">
             <thead>
               <tr>
-                <th scope="col">Nombre</th>
-                <th scope="col">Correo</th>
-                <th scope="col">Rol</th>
+                <th scope="col">{t.team.name}</th>
+                <th scope="col">{t.team.email}</th>
+                <th scope="col">{t.team.role}</th>
               </tr>
             </thead>
             <tbody>
@@ -48,7 +50,7 @@ export default function Team() {
                 <tr key={r.id}>
                   <td>{r.full_name ?? "—"}</td>
                   <td>{r.email ?? "—"}</td>
-                  <td>{ROLE_LABEL[r.role]}</td>
+                  <td>{t.roles[r.role]}</td>
                 </tr>
               ))}
             </tbody>
@@ -56,7 +58,7 @@ export default function Team() {
         </div>
       )}
       <p className="gh-small gh-muted" style={{ marginTop: "var(--space-3)" }}>
-        Para agregar a alguien, crea su usuario en Supabase (Authentication &gt; Users) y asígnale el rol con SQL. Un editor de roles llegará después.
+        {t.team.howToAdd}
       </p>
     </>
   );

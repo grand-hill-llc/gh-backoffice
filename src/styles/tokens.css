@@ -1,7 +1,9 @@
 /* Grand Hill — tokens, from the "Grand Hill" design system (tokens.json).
-   Light by default; dark follows the operating system preference. */
+   Light by default; dark follows the operating system or the user's choice (src/lib/prefs.tsx). */
 
 :root {
+  color-scheme: light;
+
   /* Brand palette */
   --charcoal: #262b33;
   --charcoal-deep: #1c2026;
@@ -66,8 +68,30 @@
   --header-height: 72px;
 }
 
+/* Dark: chosen explicitly (data-theme="dark" on <html>) or by the OS when the theme is "system" (no attribute).
+   Keep both blocks identical. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: var(--charcoal);
+  --surface-alt: var(--charcoal-deep);
+  --surface-raised: #2e343d;
+  --surface-inverse: var(--charcoal-deep);
+  --surface-inverse-deep: #16191e;
+  --ink: var(--white);
+  --ink-muted: var(--steel-light);
+  --line: #3a414c;
+  --line-strong: #80868f;
+  --line-inverse: #343a44;
+  --accent-text: var(--crimson-tint);
+  --focus: var(--white);
+  --danger: var(--crimson-tint);
+  --success: #5cc08e;
+  --warning: #e6b450;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --surface: var(--charcoal);
     --surface-alt: var(--charcoal-deep);
     --surface-raised: #2e343d;

@@ -1,11 +1,6 @@
 import { Tag, type TagTone } from "../../components/ui";
-import {
-  COMPLIANCE_LABEL,
-  STATUS_LABEL,
-  type ComplianceLevel,
-  type SubStatus,
-  type Validity,
-} from "../../lib/subcontractors";
+import { useT } from "../../i18n";
+import type { ComplianceLevel, SubStatus, Validity } from "../../lib/subcontractors";
 
 const STATUS_TONE: Record<SubStatus, TagTone> = {
   prospect: "neutral",
@@ -15,7 +10,8 @@ const STATUS_TONE: Record<SubStatus, TagTone> = {
 };
 
 export function StatusTag({ status }: { status: SubStatus }) {
-  return <Tag tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Tag>;
+  const t = useT();
+  return <Tag tone={STATUS_TONE[status]}>{t.subs.statuses[status]}</Tag>;
 }
 
 const COMPLIANCE_TONE: Record<ComplianceLevel, TagTone> = {
@@ -26,17 +22,18 @@ const COMPLIANCE_TONE: Record<ComplianceLevel, TagTone> = {
 };
 
 export function ComplianceTag({ level }: { level: ComplianceLevel }) {
-  return <Tag tone={COMPLIANCE_TONE[level]}>{COMPLIANCE_LABEL[level]}</Tag>;
+  const t = useT();
+  return <Tag tone={COMPLIANCE_TONE[level]}>{t.subs.compliance[level]}</Tag>;
 }
 
-const VALIDITY: Record<Validity, { tone: TagTone; label: string }> = {
-  valid: { tone: "success", label: "Vigente" },
-  expiring: { tone: "warning", label: "Por vencer" },
-  expired: { tone: "danger", label: "Vencido" },
-  no_expiry: { tone: "neutral", label: "Sin vencimiento" },
+const VALIDITY_TONE: Record<Validity, TagTone> = {
+  valid: "success",
+  expiring: "warning",
+  expired: "danger",
+  no_expiry: "neutral",
 };
 
 export function ValidityTag({ validity }: { validity: Validity }) {
-  const v = VALIDITY[validity];
-  return <Tag tone={v.tone}>{v.label}</Tag>;
+  const t = useT();
+  return <Tag tone={VALIDITY_TONE[validity]}>{t.subs.validity[validity]}</Tag>;
 }
