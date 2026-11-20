@@ -463,3 +463,21 @@
   .movements-table td:first-child, .movements-table th:first-child { padding-left: var(--space-2); }
   .movements-table td:last-child, .movements-table th:last-child { padding-right: var(--space-2); }
 }
+
+/* ================================================================
+   Team
+   ================================================================ */
+
+.team-flash { margin-bottom: var(--space-3); }
+.team-invite { margin-bottom: var(--space-3); max-width: 760px; }
+.team-name { display: inline-flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; font-weight: 500; }
+.team-status { font-size: 14px; min-width: 120px; }
+.team-table .row-actions { white-space: nowrap; }
+.team-status.is-muted { color: var(--ink-muted); }
+.team-status.is-warn { color: var(--warning); font-weight: 500; }
+.team-status.is-danger { color: var(--danger); font-weight: 500; }
+.team-table tr.is-open td { border-bottom-color: transparent; }
+.team-table .team-detail td { padding-top: 0; }
+.team-table .team-detail .upload-form, .team-table .team-detail .confirm-box { max-width: 640px; }
+.team-note { margin: var(--space-3) 0 0; max-width: 640px; }
+.text-btn[disabled] { opacity: .5; cursor: default; }
