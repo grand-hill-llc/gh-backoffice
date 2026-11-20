@@ -5,6 +5,9 @@ import {
   BID_COLUMNS,
   BID_STATUSES,
   CLIENT_TYPES,
+  formatMoney,
+  formatPct,
+  marginOf,
   parseMoney,
   type Bid,
   type BidStatus,
@@ -92,6 +95,8 @@ export default function BidForm() {
 
   const estimated = parseMoney(values.estimated_value);
   const price = parseMoney(values.our_price);
+  const preview =
+    price !== null && estimated !== null && !Number.isNaN(price) && !Number.isNaN(estimated) ? marginOf(price, estimated) : null;
   const titleError = touched && !values.title.trim() ? t.sales.bidTitleRequired : null;
   const estimatedError = touched && Number.isNaN(estimated) ? t.sales.moneyInvalid : null;
   const priceError = touched && Number.isNaN(price) ? t.sales.moneyInvalid : null;
@@ -275,6 +280,12 @@ export default function BidForm() {
               error={estimatedError}
               onChange={(v) => set("estimated_value", v)}
             />
+            {preview && (
+              <p className={`margin-preview span-2${preview.amount < 0 ? " is-negative" : ""}`} aria-live="polite">
+                {t.sales.marginPreview(formatMoney(preview.amount, t.locale), formatPct(preview.pct, t.locale))}
+                {preview.amount < 0 && ` · ${t.sales.marginNegative}`}
+              </p>
+            )}
           </div>
         </fieldset>
 

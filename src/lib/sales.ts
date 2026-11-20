@@ -39,6 +39,7 @@ export type Bid = {
   due_date: string | null;
   location: string | null;
   scope: string | null;
+  /** Grand Hill's estimated cost to do the job (labour, materials, subs). Shown as "Costo estimado". */
   estimated_value: number | null;
   our_price: number | null;
   notes: string | null;
@@ -69,6 +70,20 @@ function daysBetween(fromISO: string, toISO: string): number {
   const [y1, m1, d1] = fromISO.split("-").map(Number);
   const [y2, m2, d2] = toISO.slice(0, 10).split("-").map(Number);
   return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86_400_000);
+}
+
+/** Margin of a bid: price minus estimated cost, and that as a share of the price. Null unless both are known. */
+export function marginOf(price: number | null, cost: number | null): { amount: number; pct: number | null } | null {
+  if (price === null || cost === null || price === undefined || cost === undefined) return null;
+  const p = Number(price);
+  const amount = p - Number(cost);
+  return { amount, pct: p > 0 ? amount / p : null };
+}
+
+/** 0.2345 -> "23.5 %" / "23,5 %" per locale. */
+export function formatPct(value: number | null, locale: string): string {
+  if (value === null) return "—";
+  return new Intl.NumberFormat(locale, { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
 }
 
 /** USD, no cents for round amounts: 125000 -> "$125,000". */

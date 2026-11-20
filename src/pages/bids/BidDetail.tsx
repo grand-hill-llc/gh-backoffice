@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
-import { BID_COLUMNS, BID_STATUSES, formatMoney, type Bid, type BidStatus } from "../../lib/sales";
+import { BID_COLUMNS, BID_STATUSES, formatMoney, formatPct, marginOf, type Bid, type BidStatus } from "../../lib/sales";
 import { formatDate, todayISO } from "../../lib/subcontractors";
 import DeleteZone from "../../components/DeleteZone";
 import { AlertCircleIcon } from "../Icons";
@@ -83,6 +83,8 @@ export default function BidDetail() {
       </>
     );
 
+  const margin = marginOf(bid.our_price, bid.estimated_value);
+
   return (
     <>
       <Link className="back-link" to="/bids">← {t.sales.bidsTitle}</Link>
@@ -127,6 +129,12 @@ export default function BidDetail() {
         <div className="money-card">
           <p className="gh-label">{t.sales.estimatedValue}</p>
           <p className="money-value">{formatMoney(bid.estimated_value, t.locale)}</p>
+        </div>
+        <div className={`money-card${margin && margin.amount < 0 ? " is-negative" : ""}`}>
+          <p className="gh-label">{t.sales.margin}</p>
+          <p className="money-value">{margin ? formatMoney(margin.amount, t.locale) : "—"}</p>
+          {margin && margin.pct !== null && <span className="money-sub">{formatPct(margin.pct, t.locale)}</span>}
+          {margin && margin.amount < 0 && <span className="due-note is-danger">{t.sales.marginNegative}</span>}
         </div>
         <div className="money-card">
           <p className="gh-label">{t.sales.dueDate}</p>

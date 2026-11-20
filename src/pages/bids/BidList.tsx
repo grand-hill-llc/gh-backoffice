@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
-import { BID_COLUMNS, formatMoney, OPEN_STATUSES, type Bid, type BidStatus } from "../../lib/sales";
+import { BID_COLUMNS, formatMoney, formatPct, marginOf, OPEN_STATUSES, type Bid, type BidStatus } from "../../lib/sales";
 import { formatDate, todayISO } from "../../lib/subcontractors";
 import { EmptyState, PageHeader } from "../../components/ui";
 import { AlertCircleIcon } from "../Icons";
@@ -136,6 +136,7 @@ export default function BidList() {
                     <th scope="col">{t.sales.colStatus}</th>
                     <th scope="col">{t.sales.colDue}</th>
                     <th scope="col" className="num">{t.sales.colPrice}</th>
+                    <th scope="col" className="num">{t.sales.colMargin}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -154,6 +155,7 @@ export default function BidList() {
                         <DueNote bid={b} today={today} />
                       </td>
                       <td className="num nowrap">{formatMoney(b.our_price, t.locale)}</td>
+                      <MarginCell price={b.our_price} cost={b.estimated_value} locale={t.locale} />
                     </tr>
                   ))}
                 </tbody>
@@ -163,5 +165,16 @@ export default function BidList() {
         </>
       )}
     </>
+  );
+}
+
+function MarginCell({ price, cost, locale }: { price: number | null; cost: number | null; locale: string }) {
+  const m = marginOf(price, cost);
+  if (!m) return <td className="num cell-muted">—</td>;
+  return (
+    <td className={`num${m.amount < 0 ? " is-negative" : ""}`}>
+      {m.pct !== null ? formatPct(m.pct, locale) : "—"}
+      <span className="cell-sub">{formatMoney(m.amount, locale)}</span>
+    </td>
   );
 }
