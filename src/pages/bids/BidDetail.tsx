@@ -20,11 +20,21 @@ export default function BidDetail() {
   const [statusBusy, setStatusBusy] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [sourceLead, setSourceLead] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
+    // The lead this bid came from, if it was converted from one (missing table just hides the link).
+    supabase
+      .from("leads")
+      .select("id, name")
+      .eq("bid_id", id!)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (active) setSourceLead((data as { id: string; name: string } | null) ?? null);
+      });
     // Missing projects table (migration 0002 not applied) just hides the button.
     supabase
       .from("projects")
@@ -118,6 +128,11 @@ export default function BidDetail() {
             <Link className="meta-link" to={`/clientes/${bid.client.id}`}>{bid.client.name}</Link>
           ) : (
             <span className="gh-small gh-muted">{t.sales.noClient}</span>
+          )}
+          {sourceLead && (
+            <span className="gh-small gh-muted">
+              {t.leads.fromLead}: <Link className="meta-link" to={`/leads/${sourceLead.id}`}>{sourceLead.name}</Link>
+            </span>
           )}
         </div>
       </header>
