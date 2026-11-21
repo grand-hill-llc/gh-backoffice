@@ -31,7 +31,7 @@ export function Facts({ items, completeHref }: { items: FactItem[]; completeHref
           {shown.map((i) => (
             <div className="fact" key={i.label}>
               <dt className="gh-label">{i.label}</dt>
-              <dd>{i.href ? <a href={i.href}>{i.value}</a> : i.value}</dd>
+              <dd>{i.href ? <a href={i.href}>{breakable(i.value!)}</a> : breakable(i.value!)}</dd>
             </div>
           ))}
         </dl>
@@ -42,6 +42,19 @@ export function Facts({ items, completeHref }: { items: FactItem[]; completeHref
           <Link className="facts-complete" to={completeHref}>{t.common.completeDetails}</Link>
         </p>
       )}
+    </>
+  );
+}
+
+/** Lets long emails wrap right after the "@" instead of at an arbitrary letter. */
+function breakable(value: string) {
+  const at = value.indexOf("@");
+  if (at <= 0 || /\s/.test(value)) return value;
+  return (
+    <>
+      {value.slice(0, at + 1)}
+      <wbr />
+      {value.slice(at + 1)}
     </>
   );
 }

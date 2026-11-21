@@ -67,6 +67,39 @@ Después revisa en Supabase:
 
 Sin la función desplegada, **Equipo** sigue mostrando los roles y permite cambiarlos, y avisa que falta la función para invitar y quitar accesos.
 
+## Formulario del sitio web (función `website-lead`)
+
+Cada solicitud del formulario de cotización de `grandhillcorp.com/contact` crea un lead: origen **Sitio web**, etapa **Nuevo**, responsable **Adrian**, seguimiento **hoy**, el servicio y los detalles en "Qué necesita" y el mensaje completo en su historial. Si ya hay un lead abierto con el mismo correo, el mensaje se agrega a ese lead en lugar de duplicarlo.
+
+Netlify sigue recibiendo el formulario, filtrando el spam y enviando el correo de aviso como siempre. Además avisa a la función `supabase/functions/website-lead` con un webhook firmado; la función rechaza todo lo que no traiga la firma de Netlify.
+
+1. Despliega la función. Va sin verificación de sesión de Supabase (Netlify no tiene sesión); la protege la firma:
+
+```bash
+supabase functions deploy website-lead --no-verify-jwt
+```
+
+2. Crea el secreto compartido. Este comando lo genera, lo guarda en Supabase y lo deja copiado en el portapapeles para pegarlo en Netlify:
+
+```bash
+S=$(openssl rand -hex 32) && supabase secrets set NETLIFY_WEBHOOK_SECRET="$S" && printf %s "$S" | pbcopy && unset S
+```
+
+3. En Netlify, en el sitio **grandhillcorp.com**: **Site configuration > Notifications > Emails and webhooks > Form submission notifications > Add notification > HTTP POST request**.
+   - Event to listen for: **New form submission**
+   - URL to notify: `https://<ID_DEL_PROYECTO>.supabase.co/functions/v1/website-lead`
+   - Form: **quote**
+   - JWS secret token: pega el secreto del paso 2
+4. Envía una prueba desde `grandhillcorp.com/contact`. En segundos debe aparecer el lead en **Leads** y en **Seguimientos de leads** del Resumen.
+
+La notificación por correo de Netlify no se toca: sigue llegando igual.
+
+Para que los leads de la web vayan a otra persona, guarda su correo en el secreto `WEBSITE_LEAD_OWNER` (debe tener rol super admin o admin):
+
+```bash
+supabase secrets set WEBSITE_LEAD_OWNER=correo@ejemplo.com
+```
+
 ## Rutas
 
 - `/login` inicio de sesión y recuperación de contraseña
