@@ -30,7 +30,7 @@ export default function SubcontractorDetail() {
   const loadDocs = useCallback(async () => {
     const { data, error } = await supabase
       .from("subcontractor_documents")
-      .select("id, subcontractor_id, doc_type, file_path, issued_on, expires_on, notes, created_at")
+      .select("id, subcontractor_id, doc_type, file_path, issued_on, expires_on, notes, review_status, rejection_reason, created_at")
       .eq("subcontractor_id", id!)
       .order("expires_on", { ascending: false, nullsFirst: true });
     if (!error) setDocs((data ?? []) as SubDocument[]);
@@ -90,7 +90,8 @@ export default function SubcontractorDetail() {
       </>
     );
 
-  const compliance = complianceOf(docs);
+  // Documents waiting for review (or rejected) don't count until approved.
+  const compliance = complianceOf(docs.filter((d) => d.review_status === "approved"));
   const location = [sub.city, sub.state].filter(Boolean).join(", ");
 
   return (

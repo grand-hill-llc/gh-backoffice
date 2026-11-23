@@ -20,6 +20,8 @@ export type Subcontractor = {
   updated_at: string;
 };
 
+export type ReviewStatus = "pending" | "approved" | "rejected";
+
 export type SubDocument = {
   id: string;
   subcontractor_id: string;
@@ -28,6 +30,8 @@ export type SubDocument = {
   issued_on: string | null;
   expires_on: string | null;
   notes: string | null;
+  review_status: ReviewStatus;
+  rejection_reason: string | null;
   created_at: string;
 };
 

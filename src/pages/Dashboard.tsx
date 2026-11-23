@@ -18,7 +18,8 @@ const isMissingTable = (msg: string) => /schema cache|does not exist|relation/i.
 
 type BidRow = Pick<Bid, "id" | "title" | "status" | "due_date" | "our_price"> & { client: { name: string } | null };
 type DocIssue = { subId: string; company: string; docType: DocType; level: Exclude<ComplianceLevel, "ok">; date: string | null };
-type Pipeline = { openBids: BidRow[]; docIssues: DocIssue[]; subsWithIssues: number };
+type DocReview = { id: string; subcontractor_id: string; doc_type: DocType; sub: { company_name: string } | null };
+type Pipeline = { openBids: BidRow[]; docIssues: DocIssue[]; subsWithIssues: number; reviews: DocReview[] };
 
 type ProjectRow = Pick<Project, "id" | "name" | "status" | "contract_amount" | "budgeted_cost"> & { client: { name: string } | null };
 type ActiveProject = ProjectRow & { received: number; toCollect: number | null; collectedShare: number | null };
@@ -27,12 +28,17 @@ type Work = { active: ActiveProject[]; openProjects: number; toCollect: number; 
 /** Open bids, and the required-document problems of the subs Grand Hill works with (active or prequalified).
  *  Uses the same rule as the subcontractors list: a renewed document supersedes the old one. */
 async function loadPipeline(): Promise<Pipeline> {
-  const [bids, subs, docs] = await Promise.all([
+  const [bids, subs, docs, reviews] = await Promise.all([
     supabase.from("bids").select("id, title, status, due_date, our_price, client:clients(name)").in("status", OPEN_STATUSES),
     supabase.from("subcontractors").select("id, company_name, status").in("status", ["active", "prequalified"]),
     supabase.from("v_sub_documents_status").select("subcontractor_id, doc_type, expires_on"),
+    supabase
+      .from("subcontractor_documents")
+      .select("id, subcontractor_id, doc_type, sub:subcontractors(company_name)")
+      .eq("review_status", "pending")
+      .order("created_at"),
   ]);
-  const err = bids.error ?? subs.error ?? docs.error;
+  const err = bids.error ?? subs.error ?? docs.error ?? reviews.error;
   if (err) throw err;
 
   const allDocs = (docs.data ?? []) as { subcontractor_id: string; doc_type: DocType; expires_on: string | null }[];
@@ -53,7 +59,7 @@ async function loadPipeline(): Promise<Pipeline> {
   const rank: Record<DocIssue["level"], number> = { expired: 0, missing: 1, expiring: 2 };
   docIssues.sort((a, b) => rank[a.level] - rank[b.level] || (a.date ?? "").localeCompare(b.date ?? "") || a.company.localeCompare(b.company));
 
-  return { openBids: (bids.data ?? []) as unknown as BidRow[], docIssues, subsWithIssues: affected.size };
+  return { openBids: (bids.data ?? []) as unknown as BidRow[], docIssues, subsWithIssues: affected.size, reviews: (reviews.data ?? []) as unknown as DocReview[] };
 }
 
 type FollowUpRow = Pick<Lead, "id" | "name" | "company" | "status" | "next_follow_up" | "owner_id">;
@@ -187,8 +193,8 @@ export default function Dashboard() {
         <Kpi
           to="/subcontratistas"
           label={t.dashboard.docsAttention}
-          value={pipeline ? String(pipeline.docIssues.length) : null}
-          note={pipeline ? (pipeline.docIssues.length ? t.dashboard.docsAttentionNote(pipeline.subsWithIssues) : t.dashboard.docsAttentionNoteEmpty) : null}
+          value={pipeline ? String(pipeline.docIssues.length + pipeline.reviews.length) : null}
+          note={pipeline ? (pipeline.reviews.length ? t.dashboard.docsToReview(pipeline.reviews.length) : pipeline.docIssues.length ? t.dashboard.docsAttentionNote(pipeline.subsWithIssues) : t.dashboard.docsAttentionNoteEmpty) : null}
           alert={!!pipeline && pipeline.docIssues.some((d) => d.level === "expired" || d.level === "missing")}
         />
       </div>
@@ -254,11 +260,20 @@ export default function Dashboard() {
         <Panel title={t.dashboard.docsList} action={<SeeAll to="/subcontratistas" />}>
           {!pipeline ? (
             <Loading state={pipelineState} />
-          ) : pipeline.docIssues.length === 0 ? (
+          ) : pipeline.docIssues.length + pipeline.reviews.length === 0 ? (
             <p className="panel-empty">{t.dashboard.docsListEmpty}</p>
           ) : (
             <ul className="dash-list">
-              {pipeline.docIssues.slice(0, LIST_LIMIT).map((d) => (
+              {pipeline.reviews.slice(0, LIST_LIMIT).map((r) => (
+                <li key={r.id} className="dash-item">
+                  <div className="dash-main">
+                    <Link className="row-link" to={`/subcontratistas/${r.subcontractor_id}`}>{r.sub?.company_name ?? "—"}</Link>
+                    <span className="cell-sub">{t.subs.docTypes[r.doc_type]}</span>
+                  </div>
+                  <div className="dash-side"><Tag tone="warning">{t.subs.inReview}</Tag></div>
+                </li>
+              ))}
+              {pipeline.docIssues.slice(0, Math.max(0, LIST_LIMIT - pipeline.reviews.length)).map((d) => (
                 <li key={`${d.subId}-${d.docType}`} className="dash-item">
                   <div className="dash-main">
                     <Link className="row-link" to={`/subcontratistas/${d.subId}`}>{d.company}</Link>
@@ -272,7 +287,7 @@ export default function Dashboard() {
                   </div>
                 </li>
               ))}
-              <More count={pipeline.docIssues.length - LIST_LIMIT} />
+              <More count={pipeline.docIssues.length + pipeline.reviews.length - LIST_LIMIT} />
             </ul>
           )}
         </Panel>
