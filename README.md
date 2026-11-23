@@ -35,14 +35,15 @@ npm run dev
 1. En Supabase abre **SQL Editor**, pega el contenido de `supabase/migrations/0001_foundations.sql` y ejecútalo (una sola vez).
    Después haz lo mismo con `supabase/migrations/0002_projects.sql` (proyectos, subcontratistas asignados y movimientos).
    Y luego con `supabase/migrations/0003_leads.sql` (leads, responsables, seguimientos y actividad).
-   Por último `supabase/migrations/0004_convert_lead.sql` (convierte un lead en cliente + bid en una sola transacción).
+   Luego `supabase/migrations/0004_convert_lead.sql` (convierte un lead en cliente + bid en una sola transacción).
+   Por último `supabase/migrations/0005_subcontractor_portal.sql` (portal y revisión de documentos). Aplícala **antes** de desplegar la versión de la app que la usa.
 2. Despliega la función de gestión de usuarios (ver abajo). Desde ese momento, un super admin invita, cambia roles y quita accesos en **Equipo** (`/equipo`), sin entrar a Supabase.
 
 | Rol | Acceso |
 | --- | --- |
 | `super_admin` | Todo, incluida la gestión del equipo y los roles |
 | `admin` | Bids, clientes, subcontratistas y proyectos; no cambia roles |
-| `subcontractor` | Solo su propia empresa y sus documentos (`/portal`) |
+| `subcontractor` | Solo su portal (`/portal`): su empresa, sus documentos, sus trabajos y sus pagos. Sube documentos para aprobación y edita su contacto |
 
 Un usuario sin fila en `profiles` inicia sesión pero no ve nada. La seguridad real vive en las políticas RLS de Postgres; el menú solo refleja lo que cada rol puede hacer.
 
