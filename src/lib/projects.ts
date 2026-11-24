@@ -113,3 +113,67 @@ export function paidToAssignment(assignmentId: string, movements: Pick<Movement,
     .filter((m) => m.kind === "sub_payment" && m.project_sub_id === assignmentId)
     .reduce((s, m) => s + n(m.amount), 0);
 }
+
+// ---------------------------------------------------------------- change orders (0008_change_orders.sql)
+
+export type ChangeOrderStatus = "pending" | "approved" | "rejected";
+export const CHANGE_ORDER_STATUSES: ChangeOrderStatus[] = ["pending", "approved", "rejected"];
+
+export type ChangeOrder = {
+  id: string;
+  project_id: string;
+  number: number;
+  title: string;
+  description: string | null;
+  status: ChangeOrderStatus;
+  /** + more for the client to pay, − credit. */
+  contract_delta: number;
+  /** + more cost to deliver, − savings. */
+  cost_delta: number;
+  project_sub_id: string | null;
+  /** Change to that assignment's agreed amount. */
+  sub_delta: number | null;
+  requested_on: string;
+  decided_on: string | null;
+  reference: string | null;
+  created_at: string;
+};
+
+export const CHANGE_ORDER_COLUMNS =
+  "id, project_id, number, title, description, status, contract_delta, cost_delta, project_sub_id, sub_delta, requested_on, decided_on, reference, created_at";
+
+type CoAmounts = Pick<ChangeOrder, "project_id" | "status" | "contract_delta" | "cost_delta" | "project_sub_id" | "sub_delta">;
+
+/** Base + delta, keeping "no amount" when there is nothing to add. */
+function plus(base: number | null, delta: number): number | null {
+  return delta === 0 ? base : n(base) + delta;
+}
+
+/** Sum of approved (or pending) change orders: to the contract, to the cost, and per assignment. */
+export function changeOrderSums(orders: CoAmounts[], status: ChangeOrderStatus = "approved") {
+  const bySub = new Map<string, number>();
+  let contract = 0;
+  let cost = 0;
+  for (const o of orders) {
+    if (o.status !== status) continue;
+    contract += n(o.contract_delta);
+    cost += n(o.cost_delta);
+    if (o.project_sub_id && o.sub_delta !== null) bySub.set(o.project_sub_id, (bySub.get(o.project_sub_id) ?? 0) + n(o.sub_delta));
+  }
+  return { contract, cost, bySub };
+}
+
+/** The project's current contract and budget: original amounts plus its approved change orders. */
+export function withChangeOrders<P extends Pick<Project, "id" | "contract_amount" | "budgeted_cost">>(project: P, orders: CoAmounts[]): P {
+  const s = changeOrderSums(orders.filter((o) => o.project_id === project.id));
+  return { ...project, contract_amount: plus(project.contract_amount, s.contract), budgeted_cost: plus(project.budgeted_cost, s.cost) };
+}
+
+/** Each assignment's current agreed amount (original plus approved change orders), keeping the original. */
+export function assignmentsWithChangeOrders<A extends Pick<ProjectSub, "id" | "agreed_amount">>(
+  assignments: A[],
+  orders: CoAmounts[]
+): (A & { base_agreed: number | null })[] {
+  const { bySub } = changeOrderSums(orders);
+  return assignments.map((a) => ({ ...a, base_agreed: a.agreed_amount, agreed_amount: plus(a.agreed_amount, bySub.get(a.id) ?? 0) }));
+}

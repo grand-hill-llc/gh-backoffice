@@ -2,16 +2,21 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import {
+  assignmentsWithChangeOrders,
+  CHANGE_ORDER_COLUMNS,
+  changeOrderSums,
   MOVEMENT_COLUMNS,
   PROJECT_COLUMNS,
   PROJECT_STATUSES,
   PROJECT_SUB_COLUMNS,
   totalsOf,
+  withChangeOrders,
+  type ChangeOrder,
   type Movement,
   type Project,
   type ProjectStatus,
 } from "../../lib/projects";
-import { formatMoney, formatPct } from "../../lib/sales";
+import { formatMoney, formatPct, signedMoney } from "../../lib/sales";
 import { formatDate } from "../../lib/subcontractors";
 import DeleteZone from "../../components/DeleteZone";
 import { Facts, NoteBlock, Panel } from "../../components/Panel";
@@ -19,6 +24,7 @@ import { AlertCircleIcon } from "../Icons";
 import { CollectedBar } from "./projectTags";
 import ProjectSubs, { type AssignmentRow, type SubOption, type WorkUpdate } from "./ProjectSubs";
 import ProjectMovements from "./ProjectMovements";
+import ProjectChangeOrders from "./ProjectChangeOrders";
 import { useT } from "../../i18n";
 
 type Row = Project & { client: { id: string; name: string } | null; bid: { id: string; title: string } | null };
@@ -30,6 +36,7 @@ export default function ProjectDetail() {
   const [project, setProject] = useState<Row | null>(null);
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
+  const [orders, setOrders] = useState<ChangeOrder[]>([]);
   const [directory, setDirectory] = useState<SubOption[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "missing" | "error">("loading");
   const [statusBusy, setStatusBusy] = useState(false);
@@ -38,15 +45,18 @@ export default function ProjectDetail() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  /** Assignments and movements change together (a payment needs an assignment), so they reload as one. */
+  /** Assignments, movements and change orders depend on each other (a payment or a change order
+   *  can point to an assignment), so they reload as one. Assignments keep their original amounts here. */
   const loadWork = useCallback(async () => {
-    const [a, m] = await Promise.all([
+    const [a, m, c] = await Promise.all([
       supabase.from("project_subs").select(`${PROJECT_SUB_COLUMNS}, sub:subcontractors(id, company_name)`).eq("project_id", id!).order("created_at"),
       supabase.from("project_movements").select(MOVEMENT_COLUMNS).eq("project_id", id!),
+      supabase.from("change_orders").select(CHANGE_ORDER_COLUMNS).eq("project_id", id!),
     ]);
-    if (a.error || m.error) throw a.error ?? m.error;
+    if (a.error || m.error || c.error) throw a.error ?? m.error ?? c.error;
     setAssignments((a.data ?? []) as unknown as AssignmentRow[]);
     setMovements((m.data ?? []) as Movement[]);
+    setOrders((c.data ?? []) as ChangeOrder[]);
   }, [id]);
 
   useEffect(() => {
@@ -79,9 +89,10 @@ export default function ProjectDetail() {
    *  so totals match the database. A failed re-read is reported instead of silently ignored. */
   const applyWork = async (update?: WorkUpdate) => {
     if (update) {
-      const next = update({ assignments, movements });
+      const next = update({ assignments, movements, orders });
       setAssignments(next.assignments);
       setMovements(next.movements);
+      setOrders(next.orders);
     }
     setRefreshError(false);
     try {
@@ -131,8 +142,14 @@ export default function ProjectDetail() {
       </>
     );
 
-  const totals = totalsOf(project, assignments, movements);
+  // Current amounts: originals plus approved change orders.
+  const current = withChangeOrders(project, orders);
+  const currentAssignments = assignmentsWithChangeOrders(assignments, orders);
+  const totals = totalsOf(current, currentAssignments, movements);
+  const approved = changeOrderSums(orders, "approved");
+  const pending = changeOrderSums(orders, "pending");
   const money = (v: number | null) => formatMoney(v, t.locale);
+  const signed = (v: number) => signedMoney(v, t.locale);
   const overBudget = totals.budget !== null && totals.spent > totals.budget;
 
   return (
@@ -180,6 +197,10 @@ export default function ProjectDetail() {
         <div className="money-card">
           <p className="gh-label">{t.projects.contract}</p>
           <p className="money-value">{money(totals.contract)}</p>
+          {approved.contract !== 0 && (
+            <span className="money-sub">{t.projects.co.withChanges(money(project.contract_amount), signed(approved.contract))}</span>
+          )}
+          {pending.contract !== 0 && <span className="money-sub is-pending">{t.projects.co.pendingAmount(signed(pending.contract))}</span>}
           <span className="money-sub">{t.projects.collected(money(totals.received))}</span>
           {totals.collectedShare !== null && <CollectedBar share={totals.collectedShare} />}
           {totals.toCollect !== null && totals.toCollect > 0 && <span className="money-sub">{t.projects.toCollect(money(totals.toCollect))}</span>}
@@ -190,6 +211,10 @@ export default function ProjectDetail() {
         <div className="money-card">
           <p className="gh-label">{t.projects.budget}</p>
           <p className="money-value">{money(totals.budget)}</p>
+          {approved.cost !== 0 && (
+            <span className="money-sub">{t.projects.co.withChanges(money(project.budgeted_cost), signed(approved.cost))}</span>
+          )}
+          {pending.cost !== 0 && <span className="money-sub is-pending">{t.projects.co.pendingAmount(signed(pending.cost))}</span>}
           {totals.committed > 0 && <span className="money-sub">{t.projects.committed(money(totals.committed))}</span>}
         </div>
         <div className={`money-card${overBudget ? " is-negative" : ""}`}>
@@ -228,10 +253,11 @@ export default function ProjectDetail() {
           {project.notes && <NoteBlock title={t.projects.notes} text={project.notes} />}
         </Panel>
 
-        <ProjectSubs projectId={project.id} assignments={assignments} movements={movements} directory={directory} onChange={applyWork} />
+        <ProjectSubs projectId={project.id} assignments={currentAssignments} movements={movements} directory={directory} onChange={applyWork} />
       </div>
 
       <div className="detail-stack">
+        <ProjectChangeOrders projectId={project.id} orders={orders} assignments={assignments} onChange={applyWork} />
         <ProjectMovements projectId={project.id} movements={movements} assignments={assignments} onChange={applyWork} />
       </div>
 

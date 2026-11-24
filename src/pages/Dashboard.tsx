@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { ACTIVE_STATUSES, totalsOf, type Movement, type Project, type ProjectSub } from "../lib/projects";
+import { ACTIVE_STATUSES, assignmentsWithChangeOrders, totalsOf, withChangeOrders, type ChangeOrder, type Movement, type Project, type ProjectSub } from "../lib/projects";
 import { formatMoney, formatPct, OPEN_STATUSES, PRE_SUBMIT, urgencyOf, type Bid } from "../lib/sales";
 import { complianceOf, formatDate, REQUIRED_DOCS, todayISO, type ComplianceLevel, type DocType } from "../lib/subcontractors";
 import { PageHeader, Tag, type TagTone } from "../components/ui";
@@ -83,16 +83,19 @@ async function loadFollowUps(): Promise<FollowUps> {
 
 /** Projects that aren't closed: what is left to collect from clients and to pay to subs. */
 async function loadWork(): Promise<Work> {
-  const [p, a, m] = await Promise.all([
+  const [p, a, m, c] = await Promise.all([
     supabase.from("projects").select("id, name, status, contract_amount, budgeted_cost, client:clients(name)").neq("status", "closed"),
     supabase.from("project_subs").select("id, project_id, agreed_amount"),
     supabase.from("project_movements").select("project_id, kind, amount, project_sub_id"),
+    supabase.from("change_orders").select("project_id, status, contract_delta, cost_delta, project_sub_id, sub_delta").eq("status", "approved"),
   ]);
-  const err = p.error ?? a.error ?? m.error;
+  const err = p.error ?? a.error ?? m.error ?? c.error;
   if (err) throw err;
 
-  const projects = (p.data ?? []) as unknown as ProjectRow[];
-  const assignments = (a.data ?? []) as Pick<ProjectSub, "id" | "project_id" | "agreed_amount">[];
+  // Amounts as they stand today: originals plus approved change orders.
+  const orders = (c.data ?? []) as Pick<ChangeOrder, "project_id" | "status" | "contract_delta" | "cost_delta" | "project_sub_id" | "sub_delta">[];
+  const projects = ((p.data ?? []) as unknown as ProjectRow[]).map((r) => withChangeOrders(r, orders));
+  const assignments = assignmentsWithChangeOrders((a.data ?? []) as Pick<ProjectSub, "id" | "project_id" | "agreed_amount">[], orders);
   const movements = (m.data ?? []) as Pick<Movement, "project_id" | "kind" | "amount" | "project_sub_id">[];
 
   let toCollect = 0;
