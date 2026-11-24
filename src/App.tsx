@@ -23,6 +23,7 @@ import ClientList from "./pages/clients/ClientList";
 import SubcontractorDetail from "./pages/subcontractors/SubcontractorDetail";
 import SubcontractorForm from "./pages/subcontractors/SubcontractorForm";
 import SubcontractorList from "./pages/subcontractors/SubcontractorList";
+import SettingsPage from "./pages/Settings";
 import Team from "./pages/Team";
 
 function Home() {
@@ -69,6 +70,7 @@ export default function App() {
 
               <Route element={<RequireRole allow={["super_admin"]} />}>
                 <Route path="/equipo" element={<Team />} />
+                <Route path="/configuracion" element={<SettingsPage />} />
               </Route>
 
               <Route element={<RequireRole allow={["subcontractor"]} />}>

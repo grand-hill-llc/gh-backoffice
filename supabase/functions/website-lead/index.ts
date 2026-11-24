@@ -4,8 +4,8 @@
 // (Netlify still sends its email notification as before) and turns it into a lead:
 // source "website", stage "new", follow-up today, and the message in the lead's history.
 // If an open lead with the same email already exists, the message is added to it instead.
-// Every website lead is assigned to the default owner (Adrian). WEBSITE_LEAD_OWNER (optional secret,
-// an email) changes who that is without touching the code. It can be reassigned from the lead page.
+// Every website lead is assigned to the default owner chosen in the app (Configuración, public.app_settings).
+// Only before migration 0007 it falls back to WEBSITE_LEAD_OWNER or Adrian. It can be reassigned from the lead page.
 //
 // Netlify has no Supabase session, so this function is deployed with --no-verify-jwt and
 // instead only accepts requests signed with NETLIFY_WEBHOOK_SECRET (Netlify's JWS signature).
@@ -52,6 +52,15 @@ Deno.serve(async (req) => {
 
   /** The default owner's profile id, or null (lead stays unassigned) if that person has no staff profile. */
   const pickOwner = async (): Promise<string | null> => {
+    // Set in the app (Configuración). Only falls back to the email below if that table isn't there yet.
+    const settings = await db.from("app_settings").select("website_lead_owner").maybeSingle();
+    if (!settings.error && settings.data) {
+      const id = settings.data.website_lead_owner as string | null;
+      if (!id) return null;
+      const { data } = await db.from("profiles").select("id").eq("id", id).in("role", ["super_admin", "admin"]).maybeSingle();
+      return (data?.id as string | undefined) ?? null;
+    }
+
     const email = (Deno.env.get("WEBSITE_LEAD_OWNER") ?? DEFAULT_OWNER_EMAIL).trim().toLowerCase();
     const { data } = await db
       .from("profiles")
