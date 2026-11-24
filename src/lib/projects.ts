@@ -135,12 +135,16 @@ export type ChangeOrder = {
   sub_delta: number | null;
   requested_on: string;
   decided_on: string | null;
+  /** Who approved or rejected it, and exactly when (set by the database, 0009). */
+  decided_by: string | null;
+  decided_at: string | null;
+  decider?: { full_name: string | null; email: string | null } | null;
   reference: string | null;
   created_at: string;
 };
 
 export const CHANGE_ORDER_COLUMNS =
-  "id, project_id, number, title, description, status, contract_delta, cost_delta, project_sub_id, sub_delta, requested_on, decided_on, reference, created_at";
+  "id, project_id, number, title, description, status, contract_delta, cost_delta, project_sub_id, sub_delta, requested_on, decided_on, decided_by, decided_at, reference, created_at, decider:profiles(full_name, email)";
 
 type CoAmounts = Pick<ChangeOrder, "project_id" | "status" | "contract_delta" | "cost_delta" | "project_sub_id" | "sub_delta">;
 

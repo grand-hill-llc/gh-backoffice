@@ -30,7 +30,25 @@ export type Lead = {
   next_follow_up: string | null;
 };
 
-export type Email = { key: string; kind: "digest" | "reminder" | "review"; to: string; subject: string; html: string; text: string };
+/** A change order with what the emails need: its project and, if it changes a sub's amount, that assignment. */
+export type ChangeOrderRow = {
+  id: string;
+  project_id: string;
+  project_name: string;
+  number: number;
+  title: string;
+  status: "pending" | "approved" | "rejected";
+  contract_delta: number;
+  sub_delta: number | null;
+  requested_on: string;
+  decided_at: string | null;
+  /** The assignment's company, when the order changes a sub's agreed amount. */
+  subcontractor_id: string | null;
+  /** That assignment's agreed amount including every approved change order. */
+  current_agreed: number | null;
+};
+
+export type Email = { key: string; kind: "digest" | "reminder" | "review" | "change"; to: string; subject: string; html: string; text: string };
 
 export type PlanInput = {
   profiles: Profile[];
@@ -39,6 +57,7 @@ export type PlanInput = {
   now: Date;
   appUrl: string;
   settings: AlertSettings;
+  changeOrders?: ChangeOrderRow[];
   /** Ignores the morning window (dry runs and previews). */
   force?: boolean;
 };
@@ -132,6 +151,7 @@ export function reminderStage(daysLeft: number, days = DEFAULT_SETTINGS.expiryDa
 
 export function planEmails(input: PlanInput): Email[] {
   const { profiles, docs, leads, now, appUrl, settings, force } = input;
+  const changeOrders = input.changeOrders ?? [];
   const { subsEnabled, digestEnabled, digestHour, digestMuted } = settings;
   const expiryDays = cleanDays(settings.expiryDays);
   const { today, weekday } = floridaClock(now);
@@ -144,6 +164,14 @@ export function planEmails(input: PlanInput): Email[] {
       if (now.getTime() - Date.parse(d.reviewed_at) > REVIEW_LOOKBACK_MS) continue;
       for (const p of logins.filter((l) => l.subcontractor_id === d.subcontractor_id)) {
         emails.push(reviewEmail(d, p, appUrl));
+      }
+    }
+    // An approved change to a subcontractor's agreed amount, like a review result: soon after it happens.
+    for (const co of changeOrders) {
+      if (co.status !== "approved" || !co.decided_at || !co.subcontractor_id || !co.sub_delta) continue;
+      if (now.getTime() - Date.parse(co.decided_at) > REVIEW_LOOKBACK_MS) continue;
+      for (const p of logins.filter((l) => l.subcontractor_id === co.subcontractor_id)) {
+        emails.push(changeEmail(co, p, appUrl));
       }
     }
   }
@@ -174,6 +202,9 @@ export function planEmails(input: PlanInput): Email[] {
     .filter(({ left }) => staffShouldSee(left, weekday, expiryDays))
     .sort((a, b) => a.left - b.left);
   const toReview = docs.filter((d) => d.review_status === "pending");
+  const toApprove = changeOrders
+    .filter((co) => co.status === "pending")
+    .sort((a, b) => a.requested_on.localeCompare(b.requested_on));
   const dueLeads = leads
     .filter((l) => !["converted", "lost"].includes(l.status) && l.next_follow_up && l.next_follow_up <= today)
     .sort((a, b) => (a.next_follow_up as string).localeCompare(b.next_follow_up as string));
@@ -183,14 +214,14 @@ export function planEmails(input: PlanInput): Email[] {
     const mine = dueLeads.filter(
       (l) => l.owner_id === p.id || (p.role === "super_admin" && (!l.owner_id || !staffIds.has(l.owner_id))),
     );
-    const total = docAlerts.length + toReview.length + mine.length;
+    const total = docAlerts.length + toReview.length + toApprove.length + mine.length;
     if (!total) continue;
     emails.push({
       key: `digest:${today}:${p.id}`,
       kind: "digest",
       to: p.email as string,
       subject: `Grand Hill · ${total} ${total === 1 ? "pendiente" : "pendientes"} de hoy`,
-      ...digestBody({ p, today, docAlerts, toReview, leads: mine, appUrl }),
+      ...digestBody({ p, today, docAlerts, toReview, toApprove, leads: mine, appUrl }),
     });
   }
   return emails;
@@ -233,9 +264,33 @@ function leftLabel(left: number): string {
   return `Vence en ${left} ${left === 1 ? "día" : "días"}`;
 }
 
-function digestBody(args: { p: Profile; today: string; docAlerts: { d: Doc; left: number }[]; toReview: Doc[]; leads: Lead[]; appUrl: string }) {
-  const { p, today, docAlerts, toReview, leads, appUrl } = args;
+function digestBody(args: {
+  p: Profile;
+  today: string;
+  docAlerts: { d: Doc; left: number }[];
+  toReview: Doc[];
+  toApprove: ChangeOrderRow[];
+  leads: Lead[];
+  appUrl: string;
+}) {
+  const { p, today, docAlerts, toReview, toApprove, leads, appUrl } = args;
   const sections = [
+    {
+      title: "Órdenes de cambio por aprobar",
+      rows: toApprove.map((co) => {
+        const waiting = daysUntil(today, co.requested_on);
+        return {
+          href: `${appUrl}/proyectos/${co.project_id}`,
+          main: `${co.project_name} · CO ${co.number} · ${co.title}`,
+          meta: [
+            Number(co.contract_delta) ? `Al cliente ${signed(Number(co.contract_delta), "es-US")}` : null,
+            waiting <= 0 ? "Solicitada hoy" : `Pendiente hace ${waiting} ${waiting === 1 ? "día" : "días"}`,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        };
+      }),
+    },
     {
       title: "Documentos por revisar",
       rows: toReview.map((d) => ({ href: `${appUrl}/subcontratistas/${d.subcontractor_id}`, main: `${d.company_name} · ${docLabel(d.doc_type).es}`, meta: "Enviado desde el portal" })),
@@ -261,6 +316,32 @@ function digestBody(args: { p: Profile; today: string; docAlerts: { d: Doc; left
   const html = layout(title, sections.map((s) => section(s.title, s.rows)).join(""), { href: `${appUrl}/dashboard`, label: "Abrir el resumen" });
   const text = [title, ...sections.filter((s) => s.rows.length).map((s) => `\n${s.title}\n${s.rows.map((r) => `- ${r.main} (${r.meta}): ${r.href}`).join("\n")}`), `\n${appUrl}/dashboard`].join("\n");
   return { html, text };
+}
+
+function money(value: number, locale: "es-US" | "en-US"): string {
+  const whole = Number.isInteger(value);
+  return new Intl.NumberFormat(locale, { style: "currency", currency: "USD", minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: 2 }).format(value);
+}
+
+function signed(value: number, locale: "es-US" | "en-US"): string {
+  return `${value < 0 ? "−" : "+"}${money(Math.abs(value), locale)}`;
+}
+
+function changeEmail(co: ChangeOrderRow, p: Profile, appUrl: string): Email {
+  const delta = Number(co.sub_delta);
+  const total = co.current_agreed === null ? null : Number(co.current_agreed);
+  const es = `Grand Hill aprobó la orden de cambio CO ${co.number} (${co.title}) en ${co.project_name}. Tu monto acordado cambia ${signed(delta, "es-US")}${total === null ? "" : ` y queda en ${money(total, "es-US")}`}.`;
+  const en = `Grand Hill approved change order CO ${co.number} (${co.title}) on ${co.project_name}. Your agreed amount changes by ${signed(delta, "en-US")}${total === null ? "" : ` to ${money(total, "en-US")}`}.`;
+  const title = "Cambio aprobado · Change approved";
+  const href = `${appUrl}/portal`;
+  return {
+    key: `change:${co.id}:${co.decided_at}:${p.id}`,
+    kind: "change",
+    to: p.email as string,
+    subject: oneLine(`Grand Hill · ${title} · ${co.project_name}`),
+    html: layout(title, `<p style="font-size:15px;line-height:1.5">${esc(es)}</p><p style="font-size:15px;line-height:1.5;color:#6b7078">${esc(en)}</p>`, { href, label: "Abrir portal · Open portal" }),
+    text: `${es}\n\n${en}\n\n${href}`,
+  };
 }
 
 function reminderEmail(d: Doc, p: Profile, stage: string, left: number, appUrl: string): Email {

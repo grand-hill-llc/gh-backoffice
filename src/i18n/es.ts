@@ -650,8 +650,8 @@ const es = {
       deleteLabel: (n: string) => `Eliminar ${n}`,
       requestedOn: (date: string) => `Solicitada ${date}`,
       decidedOn: {
-        approved: (date: string) => `aprobada ${date}`,
-        rejected: (date: string) => `rechazada ${date}`,
+        approved: (date: string, who: string | null) => `aprobada ${date}${who ? ` por ${who}` : ""}`,
+        rejected: (date: string, who: string | null) => `rechazada ${date}${who ? ` por ${who}` : ""}`,
       },
       withChanges: (original: string, delta: string) => `Original ${original} · cambios ${delta}`,
       pendingAmount: (delta: string) => `Por aprobar ${delta}`,

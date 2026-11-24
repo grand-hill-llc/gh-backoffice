@@ -650,8 +650,8 @@ const en: Dict = {
       deleteLabel: (n: string) => `Delete ${n}`,
       requestedOn: (date: string) => `Requested ${date}`,
       decidedOn: {
-        approved: (date: string) => `approved ${date}`,
-        rejected: (date: string) => `rejected ${date}`,
+        approved: (date: string, who: string | null) => `approved ${date}${who ? ` by ${who}` : ""}`,
+        rejected: (date: string, who: string | null) => `rejected ${date}${who ? ` by ${who}` : ""}`,
       },
       withChanges: (original: string, delta: string) => `Original ${original} · changes ${delta}`,
       pendingAmount: (delta: string) => `Pending approval ${delta}`,
