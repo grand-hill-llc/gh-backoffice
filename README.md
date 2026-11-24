@@ -38,7 +38,8 @@ npm run dev
    Luego `supabase/migrations/0004_convert_lead.sql` (convierte un lead en cliente + bid en una sola transacción).
    Luego `supabase/migrations/0005_subcontractor_portal.sql` (portal y revisión de documentos). Aplícala **antes** de desplegar la versión de la app que la usa.
    Luego `supabase/migrations/0006_email_alerts.sql` (registro y programación de alertas por correo; no envía nada hasta activarlas).
-   Por último `supabase/migrations/0007_settings.sql` (configuración editable desde la app). Aplícala **antes** de desplegar la versión de la app que la usa.
+   Luego `supabase/migrations/0007_settings.sql` (configuración editable desde la app). Aplícala **antes** de desplegar la versión de la app que la usa.
+   Por último `supabase/migrations/0008_change_orders.sql` (órdenes de cambio de los proyectos y su detalle en el portal). Aplícala **antes** de desplegar la versión de la app que la usa.
 2. Despliega la función de gestión de usuarios (ver abajo). Desde ese momento, un super admin invita, cambia roles y quita accesos en **Equipo** (`/equipo`), sin entrar a Supabase.
 
 | Rol | Acceso |

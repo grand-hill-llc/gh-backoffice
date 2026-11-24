@@ -12,7 +12,7 @@ import {
   type DocType,
   type ReviewStatus,
 } from "../lib/subcontractors";
-import { formatMoney } from "../lib/sales";
+import { formatMoney, signedMoney } from "../lib/sales";
 import type { ProjectStatus } from "../lib/projects";
 import { Facts, mailHref, Panel, telHref } from "../components/Panel";
 import { PageHeader, Tag } from "../components/ui";
@@ -53,7 +53,11 @@ type Job = {
   start_date: string | null;
   end_date: string | null;
   trade: string | null;
+  /** Current amount: the original plus approved change orders that affect this subcontractor. */
   agreed_amount: number | null;
+  /** Original amount (after migration 0008). */
+  base_amount?: number | null;
+  change_orders?: { number: number; title: string; decided_on: string | null; amount: number }[];
   payments: Payment[];
 };
 type Flash = { ok: boolean; text: string } | null;
@@ -299,6 +303,27 @@ function JobCard({ job }: { job: Job }) {
           <dd>{job.agreed_amount === null ? "—" : money(Math.max(0, Number(job.agreed_amount) - paid))}</dd>
         </div>
       </dl>
+      {job.change_orders && job.change_orders.length > 0 && (
+        <div className="portal-changes">
+          <p className="gh-label">{t.portal.changesTitle}</p>
+          <ul className="portal-payments" aria-label={t.portal.changesTitle}>
+            <li>
+              <span className="gh-muted">{t.portal.originalAmount}</span>
+              <span>{money(job.base_amount ?? null)}</span>
+            </li>
+            {job.change_orders.map((co) => (
+              <li key={co.number}>
+                <span>
+                  {t.projects.co.number(co.number)} · {co.title}
+                  {co.decided_on && <span className="gh-muted"> · {formatDate(co.decided_on, t.locale)}</span>}
+                </span>
+                <span>{signedMoney(Number(co.amount), t.locale)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {job.change_orders && job.change_orders.length > 0 && <p className="gh-label portal-section-label">{t.portal.payments}</p>}
       {job.payments.length === 0 ? (
         <p className="gh-small gh-muted" style={{ margin: 0 }}>{t.portal.noPayments}</p>
       ) : (

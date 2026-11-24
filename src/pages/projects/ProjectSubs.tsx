@@ -1,16 +1,17 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
-import { paidToAssignment, PROJECT_SUB_COLUMNS, type Movement, type ProjectSub } from "../../lib/projects";
+import { paidToAssignment, PROJECT_SUB_COLUMNS, type ChangeOrder, type Movement, type ProjectSub } from "../../lib/projects";
 import { formatMoney, parseMoney } from "../../lib/sales";
 import { Panel } from "../../components/Panel";
 import MoneyField from "../../components/MoneyField";
 import { AlertCircleIcon } from "../Icons";
 import { useT } from "../../i18n";
 
-export type AssignmentRow = ProjectSub & { sub: { id: string; company_name: string } | null };
+/** agreed_amount is the current amount (with approved change orders); base_agreed the original, when known. */
+export type AssignmentRow = ProjectSub & { sub: { id: string; company_name: string } | null; base_agreed?: number | null };
 export type SubOption = { id: string; company_name: string; status: string };
-export type Work = { assignments: AssignmentRow[]; movements: Movement[] };
+export type Work = { assignments: AssignmentRow[]; movements: Movement[]; orders: ChangeOrder[] };
 /** Local change to apply before the server re-read. */
 export type WorkUpdate = (w: Work) => Work;
 
@@ -33,7 +34,13 @@ export default function ProjectSubs({ projectId, assignments, movements, directo
     setRowError(null);
     const { error } = await supabase.from("project_subs").delete().eq("id", a.id);
     if (error) {
-      setRowError(/project_movements|foreign key|violates/i.test(error.message) ? t.projects.assignmentHasPayments : t.projects.removeAssignmentFailed);
+      setRowError(
+        /change_orders/i.test(error.message)
+          ? t.projects.co.assignmentHasOrders
+          : /project_movements|foreign key|violates/i.test(error.message)
+            ? t.projects.assignmentHasPayments
+            : t.projects.removeAssignmentFailed
+      );
       setPendingRemove(null);
       return;
     }
@@ -88,6 +95,9 @@ export default function ProjectSubs({ projectId, assignments, movements, directo
                       ? t.projects.paidOf(formatMoney(paid, t.locale), formatMoney(a.agreed_amount, t.locale))
                       : t.projects.paidOnly(formatMoney(paid, t.locale))}
                   </p>
+                  {a.base_agreed !== undefined && a.base_agreed !== a.agreed_amount && (
+                    <p className="gh-small gh-muted">{t.projects.co.includesChanges(formatMoney(a.base_agreed, t.locale))}</p>
+                  )}
                 </div>
                 <div className="doc-side">
                   <div className="doc-actions">

@@ -98,6 +98,11 @@ export function formatMoney(value: number | null, locale: string): string {
   }).format(Number(value));
 }
 
+/** "+$1,200" / "−$300": a change, always with its sign. */
+export function signedMoney(value: number, locale: string): string {
+  return `${value < 0 ? "−" : "+"}${formatMoney(Math.abs(value), locale)}`;
+}
+
 /** "12,500.50" / "12500,50" / "$12,500" -> 12500.5. Empty -> null. Invalid -> NaN. */
 export function parseMoney(input: string): number | null {
   const s = input.replace(/[$\s]/g, "");

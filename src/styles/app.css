@@ -563,3 +563,15 @@
 .settings-checks.is-inline { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 .settings .gh-check { align-items: flex-start; line-height: 1.4; }
 .settings .gh-check input { margin-top: 1px; flex: none; }
+
+/* ---------- Change orders ---------- */
+.co-number { font-variant-numeric: tabular-nums; color: var(--ink-muted); margin-right: 4px; }
+.co-amounts { list-style: none; margin: 2px 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px var(--space-3); font-size: 14px; }
+.co-amounts strong { font-weight: 600; font-variant-numeric: tabular-nums; }
+.co-item.is-rejected .doc-main { opacity: .6; }
+.co-item.is-rejected .co-amounts strong { text-decoration: line-through; }
+.money-sub.is-pending { color: var(--warning, var(--ink-muted)); }
+.doc-item.is-editing { display: block; }
+.portal-changes { display: grid; gap: var(--space-1); }
+.portal-changes .gh-label { margin: 0; }
+.portal-section-label { margin: var(--space-2) 0 0; }

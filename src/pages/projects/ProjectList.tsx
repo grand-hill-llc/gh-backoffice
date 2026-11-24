@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
-import { ACTIVE_STATUSES, PROJECT_COLUMNS, totalsOf, type Movement, type Project, type ProjectStatus } from "../../lib/projects";
+import { ACTIVE_STATUSES, PROJECT_COLUMNS, totalsOf, withChangeOrders, type ChangeOrder, type Movement, type Project, type ProjectStatus } from "../../lib/projects";
 import { formatMoney, formatPct } from "../../lib/sales";
 import { EmptyState, PageHeader } from "../../components/ui";
 import { AlertCircleIcon } from "../Icons";
@@ -31,12 +31,13 @@ export default function ProjectList() {
   useEffect(() => {
     let active = true;
     (async () => {
-      const [p, m] = await Promise.all([
+      const [p, m, c] = await Promise.all([
         supabase.from("projects").select(`${PROJECT_COLUMNS}, client:clients(name)`).order("created_at", { ascending: false }),
         supabase.from("project_movements").select("project_id, kind, amount").eq("kind", "receipt"),
+        supabase.from("change_orders").select("project_id, status, contract_delta, cost_delta, project_sub_id, sub_delta").eq("status", "approved"),
       ]);
       if (!active) return;
-      const err = p.error ?? m.error;
+      const err = p.error ?? m.error ?? c.error;
       if (err) {
         setError(/schema cache|does not exist|relation/i.test(err.message) ? "missing" : "failed");
         return;
@@ -46,7 +47,9 @@ export default function ProjectList() {
         byProject.set(mv.project_id, (byProject.get(mv.project_id) ?? 0) + Number(mv.amount));
       }
       setReceived(byProject);
-      setRows((p.data ?? []) as unknown as Row[]);
+      // Contract and margin as they stand today: originals plus approved change orders.
+      const orders = (c.data ?? []) as Pick<ChangeOrder, "project_id" | "status" | "contract_delta" | "cost_delta" | "project_sub_id" | "sub_delta">[];
+      setRows(((p.data ?? []) as unknown as Row[]).map((r) => withChangeOrders(r, orders)));
     })();
     return () => {
       active = false;
