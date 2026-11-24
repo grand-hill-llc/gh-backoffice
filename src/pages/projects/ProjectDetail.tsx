@@ -56,7 +56,7 @@ export default function ProjectDetail() {
     if (a.error || m.error || c.error) throw a.error ?? m.error ?? c.error;
     setAssignments((a.data ?? []) as unknown as AssignmentRow[]);
     setMovements((m.data ?? []) as Movement[]);
-    setOrders((c.data ?? []) as ChangeOrder[]);
+    setOrders((c.data ?? []) as unknown as ChangeOrder[]);
   }, [id]);
 
   useEffect(() => {

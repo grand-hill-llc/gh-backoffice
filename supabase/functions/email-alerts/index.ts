@@ -4,6 +4,7 @@
 //   staff digest      weekday mornings in Florida, only when something needs attention
 //   expiry reminders  COI and license on each reminder date and once expired, to portal logins
 //   review results    approved or rejected documents, to portal logins
+//   change approvals  an approved change order that changes a sub's agreed amount, to portal logins
 // Hour, recipients, reminder days and on/off switches come from public.app_settings (Configuración).
 //
 // pg_cron has no user session, so this is deployed with --no-verify-jwt and only accepts
@@ -16,7 +17,17 @@
 // Deploy and setup: see README ("Alertas por correo").
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { cleanDays, DEFAULT_SETTINGS, planEmails, type AlertSettings, type Doc, type Email, type Lead, type Profile } from "./rules.ts";
+import {
+  cleanDays,
+  DEFAULT_SETTINGS,
+  planEmails,
+  type AlertSettings,
+  type ChangeOrderRow,
+  type Doc,
+  type Email,
+  type Lead,
+  type Profile,
+} from "./rules.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -74,7 +85,7 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const [profiles, docs, leads, stored] = await Promise.all([
+  const [profiles, docs, leads, stored, orders, assignments] = await Promise.all([
     admin.from("profiles").select("id, email, full_name, role, subcontractor_id"),
     admin
       .from("subcontractor_documents")
@@ -88,6 +99,10 @@ Deno.serve(async (req) => {
       .from("app_settings")
       .select("digest_enabled, digest_hour, digest_muted, expiry_days, subs_alerts_enabled")
       .maybeSingle(),
+    admin
+      .from("change_orders")
+      .select("id, project_id, number, title, status, contract_delta, sub_delta, project_sub_id, requested_on, decided_at, project:projects(name)"),
+    admin.from("project_subs").select("id, subcontractor_id, agreed_amount"),
   ]);
   if (profiles.error || docs.error || leads.error) {
     console.error("load_failed", profiles.error?.message, docs.error?.message, leads.error?.message);
@@ -100,6 +115,32 @@ Deno.serve(async (req) => {
     company_name: subcontractors?.company_name ?? "—",
     sub_status: subcontractors?.status ?? "inactive",
   }));
+
+  // Change orders (0008/0009). Without them the other alerts still go out.
+  if (orders.error || assignments.error) console.error("change_orders_unavailable", orders.error?.message ?? assignments.error?.message);
+  type OrderRow = Omit<ChangeOrderRow, "project_name" | "subcontractor_id" | "current_agreed"> & {
+    project_sub_id: string | null;
+    project: { name: string } | null;
+  };
+  const orderRows = orders.error || assignments.error ? [] : (orders.data as unknown as OrderRow[]);
+  const subsById = new Map(
+    ((assignments.data ?? []) as { id: string; subcontractor_id: string; agreed_amount: number | null }[]).map((a) => [a.id, a]),
+  );
+  const approvedBySub = new Map<string, number>();
+  for (const o of orderRows) {
+    if (o.status === "approved" && o.project_sub_id && o.sub_delta !== null) {
+      approvedBySub.set(o.project_sub_id, (approvedBySub.get(o.project_sub_id) ?? 0) + Number(o.sub_delta));
+    }
+  }
+  const changeOrders: ChangeOrderRow[] = orderRows.map(({ project, project_sub_id, ...o }) => {
+    const a = project_sub_id ? subsById.get(project_sub_id) : undefined;
+    return {
+      ...o,
+      project_name: project?.name ?? "—",
+      subcontractor_id: a?.subcontractor_id ?? null,
+      current_agreed: a ? Number(a.agreed_amount ?? 0) + (approvedBySub.get(a.id) ?? 0) : null,
+    };
+  });
 
   // Configuración in the app. Before migration 0007 there is no table: today's defaults and the old secret.
   const s = stored.error ? null : stored.data;
@@ -122,6 +163,7 @@ Deno.serve(async (req) => {
     now: new Date(),
     appUrl: (Deno.env.get("APP_URL") ?? "https://app.grandhillcorp.com").replace(/\/+$/, ""),
     settings,
+    changeOrders,
     force: dryRun || Boolean(previewTo),
   });
 
@@ -131,7 +173,7 @@ Deno.serve(async (req) => {
   if (dryRun) return json({ dry_run: true, due: counts(emails) });
 
   if (previewTo) {
-    const samples = ["digest", "reminder", "review"].flatMap((kind) => emails.find((e) => e.kind === kind) ?? []);
+    const samples = ["digest", "reminder", "review", "change"].flatMap((kind) => emails.find((e) => e.kind === kind) ?? []);
     const results = [];
     for (const e of samples) {
       const r = await sendResend({ ...e, to: previewTo, subject: `[PRUEBA] ${e.subject}` });

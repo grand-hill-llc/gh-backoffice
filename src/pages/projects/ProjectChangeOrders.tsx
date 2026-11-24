@@ -49,7 +49,7 @@ export default function ProjectChangeOrders({ projectId, orders, assignments, on
       .single();
     setBusyId(null);
     if (error || !data) return setRowError(c.decideFailed);
-    await onChange(replace(data as ChangeOrder));
+    await onChange(replace(data as unknown as ChangeOrder));
   };
 
   const remove = async (o: ChangeOrder) => {
@@ -132,7 +132,12 @@ export default function ProjectChangeOrders({ projectId, orders, assignments, on
                   <p className="gh-small gh-muted">
                     {[
                       c.requestedOn(formatDate(o.requested_on, t.locale)),
-                      o.decided_on ? c.decidedOn[o.status as "approved" | "rejected"]?.(formatDate(o.decided_on, t.locale)) : null,
+                      o.decided_on
+                        ? c.decidedOn[o.status as "approved" | "rejected"]?.(
+                            formatDate(o.decided_on, t.locale),
+                            o.decider?.full_name || o.decider?.email || null
+                          )
+                        : null,
                       o.reference,
                     ]
                       .filter(Boolean)
@@ -266,7 +271,7 @@ function ChangeOrderForm({
     const { data, error } = await query.select(CHANGE_ORDER_COLUMNS).single();
     setBusy(false);
     if (error || !data) return setError(c.saveFailed);
-    onDone(data as ChangeOrder);
+    onDone(data as unknown as ChangeOrder);
   };
 
   return (
