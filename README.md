@@ -36,7 +36,8 @@ npm run dev
    Después haz lo mismo con `supabase/migrations/0002_projects.sql` (proyectos, subcontratistas asignados y movimientos).
    Y luego con `supabase/migrations/0003_leads.sql` (leads, responsables, seguimientos y actividad).
    Luego `supabase/migrations/0004_convert_lead.sql` (convierte un lead en cliente + bid en una sola transacción).
-   Por último `supabase/migrations/0005_subcontractor_portal.sql` (portal y revisión de documentos). Aplícala **antes** de desplegar la versión de la app que la usa.
+   Luego `supabase/migrations/0005_subcontractor_portal.sql` (portal y revisión de documentos). Aplícala **antes** de desplegar la versión de la app que la usa.
+   Por último `supabase/migrations/0006_email_alerts.sql` (registro y programación de alertas por correo; no envía nada hasta activarlas).
 2. Despliega la función de gestión de usuarios (ver abajo). Desde ese momento, un super admin invita, cambia roles y quita accesos en **Equipo** (`/equipo`), sin entrar a Supabase.
 
 | Rol | Acceso |
@@ -100,6 +101,62 @@ Para que los leads de la web vayan a otra persona, guarda su correo en el secret
 ```bash
 supabase secrets set WEBSITE_LEAD_OWNER=correo@ejemplo.com
 ```
+
+## Alertas por correo (función `email-alerts`)
+
+| Quién | Qué recibe | Cuándo |
+| --- | --- | --- |
+| Admins y super admins | Documentos por revisar, vencidos o por vencer | Resumen de lunes a viernes, 8:00 a. m. de Florida, solo si hay pendientes |
+| Responsable del lead | Sus seguimientos de hoy o atrasados | En ese mismo resumen |
+| Super admins | Además, los leads sin responsable | En ese mismo resumen |
+| Subcontratista con login | Su COI o licencia a 30, 15 y 7 días y al vencer | Días laborables por la mañana |
+| Subcontratista con login | Documento aprobado o rechazado, con el motivo | Hasta 15 minutos después de la revisión |
+
+Los subcontratistas sin login no reciben correos. Sus avisos están apagados hasta definir `ALERTS_SUBS_ENABLED=true`.
+
+1. En [Resend](https://resend.com), verifica el subdominio `updates.grandhillcorp.com` agregando sus registros DNS y crea una API key con permiso **Sending access**.
+2. Aplica `supabase/migrations/0006_email_alerts.sql` en el SQL Editor.
+3. Guarda la clave de Resend:
+
+```bash
+read -rs "K?Clave de Resend: " && supabase secrets set RESEND_API_KEY="$K" && unset K
+```
+
+4. Crea el secreto de la programación. Queda en la variable `S` de esa terminal y copiado en el portapapeles:
+
+```bash
+S=$(openssl rand -hex 32) && supabase secrets set ALERTS_CRON_SECRET="$S" && printf %s "$S" | pbcopy
+```
+
+5. Despliega la función:
+
+```bash
+supabase functions deploy email-alerts --no-verify-jwt
+```
+
+6. Prueba sin avisar a nadie. El primero solo cuenta lo que se enviaría; el segundo manda una muestra de cada tipo a tu correo:
+
+```bash
+curl -s -X POST https://<ID_DEL_PROYECTO>.supabase.co/functions/v1/email-alerts -H "x-alerts-secret: $S" -H "Content-Type: application/json" -d '{"dry_run":true}'
+```
+
+```bash
+curl -s -X POST https://<ID_DEL_PROYECTO>.supabase.co/functions/v1/email-alerts -H "x-alerts-secret: $S" -H "Content-Type: application/json" -d '{"preview_to":"tu@correo.com"}'
+```
+
+7. Activa los envíos en el SQL Editor, pegando el secreto del paso 4:
+
+```sql
+select vault.create_secret('PEGA_AQUI_EL_SECRETO', 'email_alerts_secret');
+```
+
+8. Cuando quieras incluir a los subcontratistas:
+
+```bash
+supabase secrets set ALERTS_SUBS_ENABLED=true
+```
+
+Secretos opcionales: `ALERTS_FROM` (remitente, por defecto `Grand Hill <alerts@updates.grandhillcorp.com>`), `ALERTS_REPLY_TO` (buzón real para las respuestas, porque `updates` no recibe correo) y `APP_URL`. Para pausar todo: `select cron.unschedule('email-alerts');`. Cada envío queda registrado en la tabla `email_log`.
 
 ## Rutas
 
