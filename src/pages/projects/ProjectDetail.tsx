@@ -19,6 +19,7 @@ import {
 import { formatMoney, formatPct, signedMoney } from "../../lib/sales";
 import { formatDate } from "../../lib/subcontractors";
 import DeleteZone from "../../components/DeleteZone";
+import RecordLinks from "../../components/RecordLinks";
 import { Facts, NoteBlock, Panel } from "../../components/Panel";
 import { AlertCircleIcon } from "../Icons";
 import { CollectedBar } from "./projectTags";
@@ -257,6 +258,7 @@ export default function ProjectDetail() {
       </div>
 
       <div className="detail-stack">
+        <RecordLinks projectId={project.id} fromBid={project.bid} />
         <ProjectChangeOrders projectId={project.id} orders={orders} assignments={assignments} onChange={applyWork} />
         <ProjectMovements projectId={project.id} movements={movements} assignments={assignments} onChange={applyWork} />
       </div>

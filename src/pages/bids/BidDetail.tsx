@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabase";
 import { BID_COLUMNS, BID_STATUSES, formatMoney, formatPct, marginOf, type Bid, type BidStatus } from "../../lib/sales";
 import { formatDate, todayISO } from "../../lib/subcontractors";
 import DeleteZone from "../../components/DeleteZone";
+import RecordLinks from "../../components/RecordLinks";
 import { AlertCircleIcon } from "../Icons";
 import { Facts, NoteBlock, Panel } from "../../components/Panel";
 import { DueNote } from "./bidTags";
@@ -189,6 +190,10 @@ export default function BidDetail() {
           {bid.scope ? <p className="panel-text">{bid.scope}</p> : <p className="panel-empty">—</p>}
           {bid.notes && <NoteBlock title={t.sales.notes} text={bid.notes} />}
         </Panel>
+      </div>
+
+      <div className="detail-stack">
+        <RecordLinks bidId={bid.id} />
       </div>
 
       <DeleteZone
