@@ -1,9 +1,10 @@
 // Grand Hill Back Office — email-alerts Edge Function
 //
 // Called every 15 minutes by pg_cron (migration 0006). It sends through Resend:
-//   staff digest      weekdays at 8:00 a.m. Florida, only when something needs attention
-//   expiry reminders  COI and license at 30, 15 and 7 days and once expired, to portal logins
+//   staff digest      weekday mornings in Florida, only when something needs attention
+//   expiry reminders  COI and license on each reminder date and once expired, to portal logins
 //   review results    approved or rejected documents, to portal logins
+// Hour, recipients, reminder days and on/off switches come from public.app_settings (Configuración).
 //
 // pg_cron has no user session, so this is deployed with --no-verify-jwt and only accepts
 // requests carrying ALERTS_CRON_SECRET in x-alerts-secret.
@@ -15,7 +16,7 @@
 // Deploy and setup: see README ("Alertas por correo").
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { planEmails, type Doc, type Email, type Lead, type Profile } from "./rules.ts";
+import { cleanDays, DEFAULT_SETTINGS, planEmails, type AlertSettings, type Doc, type Email, type Lead, type Profile } from "./rules.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const [profiles, docs, leads] = await Promise.all([
+  const [profiles, docs, leads, stored] = await Promise.all([
     admin.from("profiles").select("id, email, full_name, role, subcontractor_id"),
     admin
       .from("subcontractor_documents")
@@ -83,6 +84,10 @@ Deno.serve(async (req) => {
       .select("id, name, company, status, owner_id, next_follow_up")
       .not("status", "in", "(converted,lost)")
       .not("next_follow_up", "is", null),
+    admin
+      .from("app_settings")
+      .select("digest_enabled, digest_hour, digest_muted, expiry_days, subs_alerts_enabled")
+      .maybeSingle(),
   ]);
   if (profiles.error || docs.error || leads.error) {
     console.error("load_failed", profiles.error?.message, docs.error?.message, leads.error?.message);
@@ -96,13 +101,27 @@ Deno.serve(async (req) => {
     sub_status: subcontractors?.status ?? "inactive",
   }));
 
+  // Configuración in the app. Before migration 0007 there is no table: today's defaults and the old secret.
+  const s = stored.error ? null : stored.data;
+  const settings: AlertSettings = s
+    ? {
+        digestEnabled: s.digest_enabled,
+        digestHour: s.digest_hour,
+        digestMuted: s.digest_muted ?? [],
+        expiryDays: cleanDays(s.expiry_days),
+        subsEnabled: s.subs_alerts_enabled,
+      }
+    : { ...DEFAULT_SETTINGS, subsEnabled: Deno.env.get("ALERTS_SUBS_ENABLED") === "true" };
+  // A preview shows every kind of email, whatever is switched off.
+  if (previewTo) Object.assign(settings, { digestEnabled: true, digestMuted: [], subsEnabled: true });
+
   const emails = planEmails({
     profiles: profiles.data as Profile[],
     docs: docRows,
     leads: leads.data as Lead[],
     now: new Date(),
     appUrl: (Deno.env.get("APP_URL") ?? "https://app.grandhillcorp.com").replace(/\/+$/, ""),
-    subsEnabled: Deno.env.get("ALERTS_SUBS_ENABLED") === "true" || Boolean(previewTo),
+    settings,
     force: dryRun || Boolean(previewTo),
   });
 

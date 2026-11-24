@@ -38,14 +38,33 @@ export type PlanInput = {
   leads: Lead[];
   now: Date;
   appUrl: string;
-  /** Subcontractor emails stay off until ALERTS_SUBS_ENABLED=true. */
-  subsEnabled: boolean;
+  settings: AlertSettings;
   /** Ignores the morning window (dry runs and previews). */
   force?: boolean;
 };
 
+/** Edited by super admins in Configuración (public.app_settings). */
+export type AlertSettings = {
+  digestEnabled: boolean;
+  /** Florida hour the morning window opens (6–11). */
+  digestHour: number;
+  /** Staff profile ids that don't get the digest. */
+  digestMuted: string[];
+  /** Days before expiry to remind, e.g. [30, 15, 7]. */
+  expiryDays: number[];
+  subsEnabled: boolean;
+};
+
+export const DEFAULT_SETTINGS: AlertSettings = {
+  digestEnabled: true,
+  digestHour: 8,
+  digestMuted: [],
+  expiryDays: [30, 15, 7],
+  subsEnabled: false,
+};
+
 const TZ = "America/New_York";
-const DIGEST_HOURS = [8, 9, 10]; // starts at 8:00; later runs only retry what failed
+const WINDOW_HOURS = 3; // opens at the chosen hour; later runs only retry what failed
 const REVIEW_LOOKBACK_MS = 3 * 86_400_000;
 const EXPIRING_TYPES = ["coi", "license"];
 
@@ -68,9 +87,16 @@ export function floridaClock(now: Date) {
   return { today: `${get("year")}-${get("month")}-${get("day")}`, weekday, hour: Number(get("hour")) };
 }
 
-export function isMorningWindow(now: Date): boolean {
+export function isMorningWindow(now: Date, startHour = DEFAULT_SETTINGS.digestHour): boolean {
   const { weekday, hour } = floridaClock(now);
-  return weekday >= 1 && weekday <= 5 && DIGEST_HOURS.includes(hour);
+  return weekday >= 1 && weekday <= 5 && hour >= startHour && hour < startHour + WINDOW_HOURS;
+}
+
+/** Valid, distinct reminder days, largest first; the defaults if none are usable. */
+export function cleanDays(days: unknown): number[] {
+  const list = Array.isArray(days) ? days.map(Number).filter((d) => Number.isInteger(d) && d >= 1 && d <= 120) : [];
+  const unique = [...new Set(list)].sort((a, b) => b - a);
+  return unique.length ? unique : DEFAULT_SETTINGS.expiryDays;
 }
 
 export function daysUntil(iso: string, today: string): number {
@@ -89,24 +115,25 @@ export function currentDocs(docs: Doc[]): Doc[] {
   return [...best.values()].filter((d) => d.expires_on !== null);
 }
 
-/** Staff see expired and ≤7-day documents daily; 30 and 15 days once, when the date is reached. */
-export function staffShouldSee(daysLeft: number, weekday: number): boolean {
-  if (daysLeft <= 7) return true;
+/** Staff see expired documents and those within the smallest reminder daily; the other reminders once, on their date. */
+export function staffShouldSee(daysLeft: number, weekday: number, days = DEFAULT_SETTINGS.expiryDays): boolean {
+  const list = cleanDays(days);
+  if (daysLeft <= Math.min(...list)) return true;
   const gap = weekday === 1 ? 3 : 1; // Monday also covers the weekend
-  return [30, 15].some((t) => daysLeft <= t && daysLeft > t - gap);
+  return list.some((t) => daysLeft <= t && daysLeft > t - gap);
 }
 
 /** Tightest reminder reached by a document, or null if it's not due yet. */
-export function reminderStage(daysLeft: number): "expired" | "7" | "15" | "30" | null {
+export function reminderStage(daysLeft: number, days = DEFAULT_SETTINGS.expiryDays): string | null {
   if (daysLeft < 0) return "expired";
-  if (daysLeft <= 7) return "7";
-  if (daysLeft <= 15) return "15";
-  if (daysLeft <= 30) return "30";
-  return null;
+  const reached = cleanDays(days).filter((t) => daysLeft <= t);
+  return reached.length ? String(Math.min(...reached)) : null;
 }
 
 export function planEmails(input: PlanInput): Email[] {
-  const { profiles, docs, leads, now, appUrl, subsEnabled, force } = input;
+  const { profiles, docs, leads, now, appUrl, settings, force } = input;
+  const { subsEnabled, digestEnabled, digestHour, digestMuted } = settings;
+  const expiryDays = cleanDays(settings.expiryDays);
   const { today, weekday } = floridaClock(now);
   const emails: Email[] = [];
   const logins = profiles.filter((p) => p.role === "subcontractor" && p.email && p.subcontractor_id);
@@ -121,14 +148,14 @@ export function planEmails(input: PlanInput): Email[] {
     }
   }
 
-  if (!force && !isMorningWindow(now)) return emails;
+  if (!force && !isMorningWindow(now, digestHour)) return emails;
 
   const current = currentDocs(docs);
 
   if (subsEnabled) {
     for (const d of current) {
       const left = daysUntil(d.expires_on as string, today);
-      const stage = reminderStage(left);
+      const stage = reminderStage(left, expiryDays);
       if (!stage) continue;
       const renewing = docs.some(
         (o) => o.subcontractor_id === d.subcontractor_id && o.doc_type === d.doc_type && o.review_status === "pending",
@@ -144,7 +171,7 @@ export function planEmails(input: PlanInput): Email[] {
   const staffIds = new Set(staff.map((p) => p.id));
   const docAlerts = current
     .map((d) => ({ d, left: daysUntil(d.expires_on as string, today) }))
-    .filter(({ left }) => staffShouldSee(left, weekday))
+    .filter(({ left }) => staffShouldSee(left, weekday, expiryDays))
     .sort((a, b) => a.left - b.left);
   const toReview = docs.filter((d) => d.review_status === "pending");
   const dueLeads = leads
@@ -152,6 +179,7 @@ export function planEmails(input: PlanInput): Email[] {
     .sort((a, b) => (a.next_follow_up as string).localeCompare(b.next_follow_up as string));
 
   for (const p of staff) {
+    if (!digestEnabled || digestMuted.includes(p.id)) continue;
     const mine = dueLeads.filter(
       (l) => l.owner_id === p.id || (p.role === "super_admin" && (!l.owner_id || !staffIds.has(l.owner_id))),
     );

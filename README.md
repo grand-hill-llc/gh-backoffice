@@ -37,12 +37,13 @@ npm run dev
    Y luego con `supabase/migrations/0003_leads.sql` (leads, responsables, seguimientos y actividad).
    Luego `supabase/migrations/0004_convert_lead.sql` (convierte un lead en cliente + bid en una sola transacción).
    Luego `supabase/migrations/0005_subcontractor_portal.sql` (portal y revisión de documentos). Aplícala **antes** de desplegar la versión de la app que la usa.
-   Por último `supabase/migrations/0006_email_alerts.sql` (registro y programación de alertas por correo; no envía nada hasta activarlas).
+   Luego `supabase/migrations/0006_email_alerts.sql` (registro y programación de alertas por correo; no envía nada hasta activarlas).
+   Por último `supabase/migrations/0007_settings.sql` (configuración editable desde la app). Aplícala **antes** de desplegar la versión de la app que la usa.
 2. Despliega la función de gestión de usuarios (ver abajo). Desde ese momento, un super admin invita, cambia roles y quita accesos en **Equipo** (`/equipo`), sin entrar a Supabase.
 
 | Rol | Acceso |
 | --- | --- |
-| `super_admin` | Todo, incluida la gestión del equipo y los roles |
+| `super_admin` | Todo, incluida la gestión del equipo y los roles, y la **Configuración** (`/configuracion`) |
 | `admin` | Bids, clientes, subcontratistas y proyectos; no cambia roles |
 | `subcontractor` | Solo su portal (`/portal`): su empresa, sus documentos, sus trabajos y sus pagos. Sube documentos para aprobación y edita su contacto |
 
@@ -71,7 +72,7 @@ Sin la función desplegada, **Equipo** sigue mostrando los roles y permite cambi
 
 ## Formulario del sitio web (función `website-lead`)
 
-Cada solicitud del formulario de cotización de `grandhillcorp.com/contact` crea un lead: origen **Sitio web**, etapa **Nuevo**, responsable **Adrian**, seguimiento **hoy**, el servicio y los detalles en "Qué necesita" y el mensaje completo en su historial. Si ya hay un lead abierto con el mismo correo, el mensaje se agrega a ese lead en lugar de duplicarlo.
+Cada solicitud del formulario de cotización de `grandhillcorp.com/contact` crea un lead: origen **Sitio web**, etapa **Nuevo**, responsable el elegido en **Configuración**, seguimiento **hoy**, el servicio y los detalles en "Qué necesita" y el mensaje completo en su historial. Si ya hay un lead abierto con el mismo correo, el mensaje se agrega a ese lead en lugar de duplicarlo.
 
 Netlify sigue recibiendo el formulario, filtrando el spam y enviando el correo de aviso como siempre. Además avisa a la función `supabase/functions/website-lead` con un webhook firmado; la función rechaza todo lo que no traiga la firma de Netlify.
 
@@ -96,23 +97,19 @@ S=$(openssl rand -hex 32) && supabase secrets set NETLIFY_WEBHOOK_SECRET="$S" &&
 
 La notificación por correo de Netlify no se toca: sigue llegando igual.
 
-Para que los leads de la web vayan a otra persona, guarda su correo en el secreto `WEBSITE_LEAD_OWNER` (debe tener rol super admin o admin):
-
-```bash
-supabase secrets set WEBSITE_LEAD_OWNER=correo@ejemplo.com
-```
+Para que los leads de la web vayan a otra persona, cámbiala en **Configuración > Leads del sitio web**. El secreto `WEBSITE_LEAD_OWNER` solo se usa si la migración 0007 no está aplicada.
 
 ## Alertas por correo (función `email-alerts`)
 
 | Quién | Qué recibe | Cuándo |
 | --- | --- | --- |
-| Admins y super admins | Documentos por revisar, vencidos o por vencer | Resumen de lunes a viernes, 8:00 a. m. de Florida, solo si hay pendientes |
+| Admins y super admins | Documentos por revisar, vencidos o por vencer | Resumen de lunes a viernes por la mañana (Florida), solo si hay pendientes |
 | Responsable del lead | Sus seguimientos de hoy o atrasados | En ese mismo resumen |
 | Super admins | Además, los leads sin responsable | En ese mismo resumen |
-| Subcontratista con login | Su COI o licencia a 30, 15 y 7 días y al vencer | Días laborables por la mañana |
+| Subcontratista con login | Su COI o licencia en cada fecha de aviso y al vencer | Días laborables por la mañana |
 | Subcontratista con login | Documento aprobado o rechazado, con el motivo | Hasta 15 minutos después de la revisión |
 
-Los subcontratistas sin login no reciben correos. Sus avisos están apagados hasta definir `ALERTS_SUBS_ENABLED=true`.
+Los subcontratistas sin login no reciben correos. La hora del resumen, quién lo recibe, los días de aviso y los correos a subcontratistas se cambian en **Configuración** (por defecto: 8:00 a. m., todo el equipo, 30, 15 y 7 días, avisos a subcontratistas encendidos).
 
 1. En [Resend](https://resend.com), verifica el subdominio `updates.grandhillcorp.com` agregando sus registros DNS y crea una API key con permiso **Sending access**.
 2. Aplica `supabase/migrations/0006_email_alerts.sql` en el SQL Editor.
@@ -150,11 +147,7 @@ curl -s -X POST https://<ID_DEL_PROYECTO>.supabase.co/functions/v1/email-alerts 
 select vault.create_secret('PEGA_AQUI_EL_SECRETO', 'email_alerts_secret');
 ```
 
-8. Cuando quieras incluir a los subcontratistas:
-
-```bash
-supabase secrets set ALERTS_SUBS_ENABLED=true
-```
+8. Ajusta el resto en **Configuración**. El secreto `ALERTS_SUBS_ENABLED` solo se usa si la migración 0007 no está aplicada.
 
 Secretos opcionales: `ALERTS_FROM` (remitente, por defecto `Grand Hill <alerts@updates.grandhillcorp.com>`), `ALERTS_REPLY_TO` (buzón real para las respuestas, porque `updates` no recibe correo) y `APP_URL`. Para pausar todo: `select cron.unschedule('email-alerts');`. Cada envío queda registrado en la tabla `email_log`.
 
