@@ -204,6 +204,7 @@ const es = {
     copy: "Copiar",
     copied: "Copiado",
     linkHelp: "El cliente verá esta versión tal cual, aunque después cambies el estimado. Al crear otro enlace, este se anula.",
+    mailedTo: (to: string) => `Enviada por correo a ${to}.`,
     linkFailed: "No pudimos crear el enlace. Inténtalo de nuevo.",
     linkMissingTable: "Falta la tabla de enlaces en Supabase. Aplica supabase/migrations/0013_proposal_links.sql en el SQL Editor.",
     public: {
@@ -251,6 +252,29 @@ const es = {
     withdrawFailed: "No pudimos anular el enlace. Inténtalo de nuevo.",
     loadFailed: "No pudimos cargar las propuestas enviadas.",
     help: "Para enviar una versión nueva, abre Ver propuesta y crea otro enlace: el anterior se anula solo. Al aceptarse, el bid pasa a Ganado.",
+    mail: {
+      send: "Enviar por correo",
+      to: "Para *",
+      cc: "Copia (CC)",
+      ccHelp: "Opcional. Hasta 5 correos, separados por coma.",
+      message: "Mensaje",
+      messageHelp: (lang: string) =>
+        `En ${lang}, el idioma de la propuesta. Debajo se agregan el botón para abrirla, el total y la vigencia. Las respuestas del cliente llegan al correo de la empresa y tú recibes una copia.`,
+      submit: "Enviar",
+      sending: "Enviando…",
+      invalidTo: "Escribe un correo válido.",
+      invalidCc: "Revisa los correos en copia.",
+      tooManyCc: "Máximo 5 correos en copia.",
+      tooLong: "El mensaje es demasiado largo.",
+      notOpen: "Esta propuesta ya no está abierta.",
+      expired: "La propuesta venció. Crea un enlace nuevo para enviarla.",
+      failed: "No pudimos enviar el correo. Inténtalo de nuevo.",
+      missing: "El envío por correo todavía no está activo: falta desplegar la función send-proposal.",
+      sentTo: (to: string, at: string, who: string | null) => `Enviada por correo a ${to} · ${at}${who ? ` · por ${who}` : ""}`,
+      ccLine: (list: string) => `copia a ${list}`,
+      defaultMessage: (contact: string | null, title: string, sender: string | null) =>
+        `${contact ? `Hola ${contact},` : "Hola,"}\n\nGracias por la oportunidad de cotizar ${title}. Le compartimos nuestra propuesta: puede revisarla y aceptarla en línea con el botón de abajo.\n\nQuedamos atentos a cualquier pregunta.\n\nSaludos,\n${sender ?? "Grand Hill"}`,
+    },
   },
   estimates: {
     linesTitle: "Estimado",

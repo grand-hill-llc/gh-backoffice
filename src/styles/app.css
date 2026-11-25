@@ -779,3 +779,13 @@
 .proposed-sub-name { display: flex; flex-direction: column; gap: 2px; }
 .proposed-sub-amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .assignment-note { white-space: pre-line; }
+.doc-item.is-mailing { flex-wrap: wrap; }
+.mail-form { flex: 1 0 100%; margin-top: 0; }
+/* Proposal links: the text keeps its width; the actions wrap instead of squeezing it */
+.link-item .doc-main { flex: 1 1 60%; }
+.link-item .doc-side { flex: 0 1 auto; }
+.link-item .doc-actions { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; }
+.proposal-mail { max-width: 816px; margin: 0 auto var(--space-3); }
+.proposal-mail .mail-form { background: var(--surface); }
+@media print { .proposal-mail { display: none; } }
+@media (max-width: 640px) { .proposal-link-row { flex-wrap: wrap; } .proposal-link-row .gh-input { flex-basis: 100%; } }

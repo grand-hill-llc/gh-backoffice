@@ -7,6 +7,7 @@ import { usePrefs, type Lang } from "../../lib/prefs";
 import ProposalSheet, { type ProposalContent } from "../../components/ProposalSheet";
 import { AlertCircleIcon, CheckCircleIcon } from "../Icons";
 import { dictFor, useT } from "../../i18n";
+import { MailForm, type EmailRow } from "./BidProposalLinks";
 
 type BidRow = {
   id: string;
@@ -52,7 +53,11 @@ export default function BidProposal() {
   const [showLines, setShowLines] = useState(true);
   const [state, setState] = useState<"loading" | "ready" | "missing" | "failed">("loading");
   const [sharing, setSharing] = useState(false);
-  const [shared, setShared] = useState<{ url: string; error?: undefined } | { url?: undefined; error: string } | null>(null);
+  const [shared, setShared] = useState<
+    { url: string; id: string; lang: Lang; error?: undefined } | { url?: undefined; error: string } | null
+  >(null);
+  const [mailing, setMailing] = useState(false);
+  const [mailed, setMailed] = useState<EmailRow[]>([]);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -89,6 +94,8 @@ export default function BidProposal() {
   useEffect(() => {
     setShared(null);
     setCopied(false);
+    setMailing(false);
+    setMailed([]);
   }, [lang, showLines]);
 
   if (state === "loading") return <p className="gh-muted proposal-status" role="status">{ui.common.loading}</p>;
@@ -134,17 +141,20 @@ export default function BidProposal() {
     setSharing(true);
     setShared(null);
     setCopied(false);
+    setMailing(false);
+    setMailed([]);
     const { data, error } = await supabase
       .from("proposal_links")
       .insert({ bid_id: bid.id, lang, content, total, valid_until: content.valid_until })
-      .select("token")
+      .select("id, token, lang")
       .single();
     setSharing(false);
     if (error || !data) {
       setShared({ error: /schema cache|does not exist|relation/i.test(error?.message ?? "") ? ui.proposal.linkMissingTable : ui.proposal.linkFailed });
       return;
     }
-    setShared({ url: proposalUrl((data as { token: string }).token) });
+    const row = data as { id: string; token: string; lang: Lang };
+    setShared({ url: proposalUrl(row.token), id: row.id, lang: row.lang });
   };
 
   const copy = async (url: string) => {
@@ -198,7 +208,18 @@ export default function BidProposal() {
                 <button className="gh-btn gh-btn-secondary gh-btn-sm" type="button" onClick={() => copy(shared.url)}>
                   {copied ? ui.proposal.copied : ui.proposal.copy}
                 </button>
+                {!mailing && (
+                  <button className="gh-btn gh-btn-secondary gh-btn-sm" type="button" onClick={() => setMailing(true)}>
+                    {ui.proposalLinks.mail.send}
+                  </button>
+                )}
               </div>
+              {mailed.map((m) => (
+                <p key={m.id} className="gh-small">
+                  <strong>{ui.proposal.mailedTo(m.recipient)}</strong>
+                  {m.cc.length > 0 && <span> {ui.proposalLinks.mail.ccLine(m.cc.join(", "))}.</span>}
+                </p>
+              ))}
               <p className="gh-small">{ui.proposal.linkHelp}</p>
             </div>
           </div>
@@ -211,6 +232,21 @@ export default function BidProposal() {
           <p className="gh-small gh-muted">{ui.proposal.printHint}</p>
         )}
       </div>
+
+      {shared?.url && mailing && (
+        <div className="proposal-mail">
+          <MailForm
+            row={{ id: shared.id, lang: shared.lang }}
+            bidTitle={bid.title}
+            client={bid.client ? { contact_name: bid.client.contact_name, email: bid.client.email } : null}
+            onCancel={() => setMailing(false)}
+            onSent={(m) => {
+              setMailing(false);
+              setMailed((list) => [...list, m]);
+            }}
+          />
+        </div>
+      )}
 
       <ProposalSheet content={content} lang={lang} />
     </div>
