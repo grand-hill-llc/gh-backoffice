@@ -1061,6 +1061,12 @@ const es = {
     datesInvalid: "La fecha de vencimiento no puede ser anterior a la de emisión.",
     uploadFailed: "No pudimos subir el archivo. Inténtalo de nuevo.",
     saveDocFailed: "No pudimos guardar el documento. Inténtalo de nuevo.",
+    editDocLabel: (type: string) => `Editar ${type}`,
+    replaceFile: "Reemplazar archivo",
+    replaceFileHelp: (name: string) => `Opcional. Si eliges uno, reemplaza a ${name}. PDF o imagen, hasta 20 MB.`,
+    addFileHelp: "Opcional. Este documento no tiene archivo. PDF o imagen, hasta 20 MB.",
+    saveDocChanges: "Guardar cambios",
+    pendingTypeTaken: "Ya hay otro documento de este tipo en revisión para esta empresa.",
     // Form
     newTitle: "Nuevo subcontratista",
     editTitle: "Editar subcontratista",

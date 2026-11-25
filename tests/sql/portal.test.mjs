@@ -72,5 +72,13 @@ ok("storage: delete does nothing", (await as(U.x,`delete from storage.objects wh
 ok("staff can't use portal", /not_allowed/.test((await as(U.a,"select portal_company()")).error||""));
 ok("helper not callable", /permission denied/.test((await as(U.x,"select portal_sub_id()")).error||""));
 await db.exec("set role anon;"); let e=""; try{await db.query("select portal_company()")}catch(x){e=x.message}; await db.exec("reset role;"); ok("anon denied", /permission denied/.test(e));
+// Staff edit a document (DocumentsSection): type, dates, notes and file.
+const D=(await db.query(`select id from subcontractor_documents where subcontractor_id='${S.x}' and doc_type='coi' limit 1`)).rows[0].id;
+ok("staff edits document", (await as(U.a,`update subcontractor_documents set expires_on='2031-06-30', issued_on='2026-02-01', notes='Póliza GL-9', file_path='${S.x}/n/2.pdf' where id='${D}' returning id`)).rows?.length===1);
+ok("edit keeps dates consistent", !!(await as(U.a,`update subcontractor_documents set issued_on='2032-01-01' where id='${D}'`)).error);
+ok("sub can't edit document", (await as(U.x,`update subcontractor_documents set expires_on='2040-01-01' where id='${D}' returning id`)).rows?.length===0);
+await db.exec(`insert into subcontractor_documents(subcontractor_id,doc_type,file_path,review_status) values ('${S.x}','w9','${S.x}/n/w9.pdf','pending'),('${S.x}','license','${S.x}/n/l.pdf','pending')`);
+const L=(await db.query(`select id from subcontractor_documents where doc_type='license' and subcontractor_id='${S.x}'`)).rows[0].id;
+ok("type change can collide with a pending one", /subcontractor_documents_one_pending/.test((await as(U.a,`update subcontractor_documents set doc_type='w9' where id='${L}'`)).error||""));
 ok("staff still reads all subs", (await as(U.a,"select id from subcontractors")).rows?.length===2);
 console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail?1:0);
