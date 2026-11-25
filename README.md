@@ -10,6 +10,15 @@ cp .env.example .env.local   # completa las dos variables
 npm run dev
 ```
 
+## Pruebas
+
+```bash
+npm test                # todas
+npm test -- alerts      # solo los archivos cuyo nombre contiene "alerts"
+```
+
+Necesitan Node 22.6 o superior. No usan Supabase ni red: las de `tests/sql` aplican las migraciones reales en un Postgres en memoria (PGlite) y prueban permisos (RLS), triggers y funciones; las de `tests/unit` prueban los cálculos y reglas de la app y de las Edge Functions. Córrelas antes de cada PR, sobre todo si cambias una migración, un permiso o un cálculo de montos. Una migración nueva se agrega a la lista de migraciones de las pruebas SQL que la necesiten.
+
 ## Variables de entorno
 
 | Variable | Valor |
