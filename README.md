@@ -53,7 +53,8 @@ Necesitan Node 22.6 o superior. No usan Supabase ni red: las de `tests/sql` apli
    Luego `supabase/migrations/0010_record_links.sql` (enlaces a archivos de bids y proyectos en Google Drive; no usa Storage). Aplícala **antes** de desplegar la versión de la app que la usa.
    Luego `supabase/migrations/0011_estimates.sql` (cotizaciones de subcontratistas y conceptos del estimado de cada bid). Aplícala **antes** de desplegar la versión de la app que la usa.
    Luego `supabase/migrations/0012_proposal_settings.sql` (datos de la empresa, condiciones y vigencia de la propuesta al cliente). Aplícala **antes** de desplegar la versión de la app que la usa.
-   Por último `supabase/migrations/0013_proposal_links.sql` (enlace para que el cliente acepte o rechace la propuesta en línea). Aplícala **antes** de desplegar la app, y vuelve a desplegar `email-alerts` para avisar al equipo de cada respuesta.
+   Luego `supabase/migrations/0013_proposal_links.sql` (enlace para que el cliente acepte o rechace la propuesta en línea). Aplícala **antes** de desplegar la app, y vuelve a desplegar `email-alerts` para avisar al equipo de cada respuesta.
+   Por último `supabase/migrations/0014_proposal_emails.sql` (registro de las propuestas enviadas por correo desde la app). Aplícala **antes** de desplegar la app y despliega la función `send-proposal` (ver "Envío de propuestas por correo").
 2. Despliega la función de gestión de usuarios (ver abajo). Desde ese momento, un super admin invita, cambia roles y quita accesos en **Equipo** (`/equipo`), sin entrar a Supabase.
 
 | Rol | Acceso |
@@ -167,6 +168,18 @@ select vault.create_secret('PEGA_AQUI_EL_SECRETO', 'email_alerts_secret');
 8. Ajusta el resto en **Configuración**. El secreto `ALERTS_SUBS_ENABLED` solo se usa si la migración 0007 no está aplicada.
 
 Secretos opcionales: `ALERTS_FROM` (remitente, por defecto `Grand Hill <alerts@updates.grandhillcorp.com>`), `ALERTS_REPLY_TO` (buzón real para las respuestas, porque `updates` no recibe correo) y `APP_URL`. Para pausar todo: `select cron.unschedule('email-alerts');`. Cada envío queda registrado en la tabla `email_log`.
+
+## Envío de propuestas por correo (función `send-proposal`)
+
+En el panel **Propuesta al cliente** de cada bid, cada enlace abierto tiene **Enviar por correo**: destinatario (precargado con el correo del cliente), hasta 5 correos en copia y un mensaje sugerido en el idioma de la propuesta, editable. El correo lleva el botón para abrir y aceptar la propuesta, el total y la vigencia. Sale desde `proposals@updates.grandhillcorp.com` con Resend; las respuestas del cliente van al buzón de la empresa (`PROPOSALS_REPLY_TO`, o si no existe `ALERTS_REPLY_TO`) y quien la envía recibe una copia oculta. Cada envío queda en la tabla `proposal_emails` y se ve en la propuesta.
+
+Solo la usan super admins y admins con sesión iniciada, así que va **con** verificación de sesión. Usa el `RESEND_API_KEY` que ya está configurado para las alertas:
+
+```bash
+supabase functions deploy send-proposal
+```
+
+Secretos opcionales: `PROPOSALS_FROM` (remitente), `PROPOSALS_REPLY_TO` y `APP_URL` (por defecto `https://app.grandhillcorp.com`). Sin la función desplegada, el botón avisa que el envío todavía no está activo.
 
 ## Rutas
 

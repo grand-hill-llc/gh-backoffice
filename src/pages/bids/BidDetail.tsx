@@ -13,7 +13,7 @@ import { Facts, NoteBlock, Panel } from "../../components/Panel";
 import { DueNote } from "./bidTags";
 import { useT } from "../../i18n";
 
-type Row = Bid & { client: { id: string; name: string } | null };
+type Row = Bid & { client: { id: string; name: string; contact_name: string | null; email: string | null } | null };
 
 export default function BidDetail() {
   const { id } = useParams();
@@ -57,7 +57,7 @@ export default function BidDetail() {
       });
     supabase
       .from("bids")
-      .select(`${BID_COLUMNS}, client:clients(id, name)`)
+      .select(`${BID_COLUMNS}, client:clients(id, name, contact_name, email)`)
       .eq("id", id!)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -206,7 +206,7 @@ export default function BidDetail() {
 
       <div className="detail-stack">
         <BidEstimate bidId={bid.id} onTotals={onTotals} />
-        <BidProposalLinks bidId={bid.id} />
+        <BidProposalLinks bidId={bid.id} bidTitle={bid.title} client={bid.client} />
         <RecordLinks bidId={bid.id} />
       </div>
 

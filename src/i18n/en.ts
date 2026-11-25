@@ -206,6 +206,7 @@ const en: Dict = {
     copy: "Copy",
     copied: "Copied",
     linkHelp: "The client will see this exact version, even if you change the estimate later. Creating another link withdraws this one.",
+    mailedTo: (to: string) => `Emailed to ${to}.`,
     linkFailed: "We couldn't create the link. Try again.",
     linkMissingTable: "The links table is missing in Supabase. Apply supabase/migrations/0013_proposal_links.sql in the SQL Editor.",
     public: {
@@ -253,6 +254,29 @@ const en: Dict = {
     withdrawFailed: "We couldn't withdraw the link. Try again.",
     loadFailed: "We couldn't load the proposals sent.",
     help: "To send a new version, open View proposal and create another link: the previous one is withdrawn. Once accepted, the bid becomes Won.",
+    mail: {
+      send: "Send by email",
+      to: "To *",
+      cc: "Copy (CC)",
+      ccHelp: "Optional. Up to 5 emails, separated by commas.",
+      message: "Message",
+      messageHelp: (lang: string) =>
+        `In ${lang}, the proposal's language. The button to open it, the total and the validity are added below. The client's replies go to the company inbox and you get a copy.`,
+      submit: "Send",
+      sending: "Sending…",
+      invalidTo: "Enter a valid email.",
+      invalidCc: "Check the CC emails.",
+      tooManyCc: "Up to 5 CC emails.",
+      tooLong: "The message is too long.",
+      notOpen: "This proposal is no longer open.",
+      expired: "The proposal expired. Create a new link to send it.",
+      failed: "We couldn't send the email. Please try again.",
+      missing: "Email sending isn't active yet: the send-proposal function needs to be deployed.",
+      sentTo: (to: string, at: string, who: string | null) => `Emailed to ${to} · ${at}${who ? ` · by ${who}` : ""}`,
+      ccLine: (list: string) => `cc ${list}`,
+      defaultMessage: (contact: string | null, title: string, sender: string | null) =>
+        `${contact ? `Hi ${contact},` : "Hello,"}\n\nThank you for the opportunity to bid on ${title}. Here is our proposal: you can review and accept it online with the button below.\n\nLet us know if you have any questions.\n\nBest regards,\n${sender ?? "Grand Hill"}`,
+    },
   },
   estimates: {
     linesTitle: "Estimate",
@@ -784,6 +808,10 @@ const en: Dict = {
     saveFailed: "We couldn't save the changes. Try again.",
     fromBidNote: (title: string) => `Created from the bid “${title}”. Check the copied details.`,
     bidAlreadyHasProject: "This bid already has a project.",
+    sectionSubs: "Subcontractors",
+    subsFromEstimateHelp: "From the quotes used in the estimate. The agreed amount is the cost of those items. Uncheck any you don't want to assign.",
+    quoteRef: (refs: string) => `Quote ${refs}`,
+    subsAssignFailed: "We couldn't assign the subcontractors, so the project wasn't created. Please try again.",
     deleteProject: "Delete project",
     deleteConfirm: (name: string, moves: number) =>
       `${name} will be deleted along with its assignments and ${moves} movement${moves === 1 ? "" : "s"}. This can't be undone.`,

@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "helvetica",
+        "createdAt": "2026-11-25T17:48:08.424Z",
+        "reason": "Claude: HTML email body; Helvetica/Arial is the email-safe stack because most mail clients don't load web fonts (same as the email-alerts templates)"
+      }
+    ]
+  }
+}
