@@ -784,6 +784,10 @@ const en: Dict = {
     saveFailed: "We couldn't save the changes. Try again.",
     fromBidNote: (title: string) => `Created from the bid “${title}”. Check the copied details.`,
     bidAlreadyHasProject: "This bid already has a project.",
+    sectionSubs: "Subcontractors",
+    subsFromEstimateHelp: "From the quotes used in the estimate. The agreed amount is the cost of those items. Uncheck any you don't want to assign.",
+    quoteRef: (refs: string) => `Quote ${refs}`,
+    subsAssignFailed: "We couldn't assign the subcontractors, so the project wasn't created. Please try again.",
     deleteProject: "Delete project",
     deleteConfirm: (name: string, moves: number) =>
       `${name} will be deleted along with its assignments and ${moves} movement${moves === 1 ? "" : "s"}. This can't be undone.`,

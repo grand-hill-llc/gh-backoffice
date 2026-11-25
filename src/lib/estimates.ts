@@ -81,3 +81,38 @@ export function cheapestQuotes(quotes: Pick<SubQuote, "id" | "trade" | "amount">
   }
   return ids;
 }
+
+/** A subcontractor assignment proposed for the project, from the estimate lines that use its quotes. */
+export type ProposedAssignment = {
+  key: string;
+  subcontractor_id: string;
+  trade: string | null;
+  /** Sum of the cost of those lines: what Grand Hill budgeted to pay this sub. */
+  agreed_amount: number;
+  references: string[];
+};
+
+/**
+ * One assignment per subcontractor and trade, for the lines tied to a quote. The amount is the
+ * lines' cost (not the quote), so it matches the project budget even if a line changed the quantity.
+ * Lines without a quote, or whose quote is gone, are left out. Ordered by the first line's position.
+ */
+export function assignmentsFromEstimate(
+  lines: Pick<EstimateLine, "position" | "trade" | "sub_quote_id" | "cost_amount">[],
+  quotes: Pick<SubQuote, "id" | "subcontractor_id" | "trade" | "reference">[],
+): ProposedAssignment[] {
+  const byId = new Map(quotes.map((q) => [q.id, q]));
+  const groups = new Map<string, ProposedAssignment & { first: number }>();
+  for (const l of [...lines].sort((a, b) => a.position - b.position)) {
+    const q = l.sub_quote_id ? byId.get(l.sub_quote_id) : undefined;
+    if (!q) continue;
+    const trade = (q.trade ?? l.trade)?.trim() || null;
+    const key = `${q.subcontractor_id}|${tradeKey(trade)}`;
+    const g = groups.get(key) ?? { key, subcontractor_id: q.subcontractor_id, trade, agreed_amount: 0, references: [], first: l.position };
+    g.agreed_amount = cents(g.agreed_amount + Number(l.cost_amount));
+    const ref = q.reference?.trim();
+    if (ref && !g.references.includes(ref)) g.references.push(ref);
+    groups.set(key, g);
+  }
+  return [...groups.values()].sort((a, b) => a.first - b.first).map(({ first: _first, ...g }) => g);
+}

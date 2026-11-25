@@ -98,6 +98,7 @@ export default function ProjectSubs({ projectId, assignments, movements, directo
                   {a.base_agreed !== undefined && a.base_agreed !== a.agreed_amount && (
                     <p className="gh-small gh-muted">{t.projects.co.includesChanges(formatMoney(a.base_agreed, t.locale))}</p>
                   )}
+                  {a.notes && <p className="gh-small gh-muted assignment-note">{a.notes}</p>}
                 </div>
                 <div className="doc-side">
                   <div className="doc-actions">

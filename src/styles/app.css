@@ -770,3 +770,12 @@
 .detail-actions { margin-top: 0; }
 @media (max-width: 760px) { .detail-title-row { align-items: flex-start; } }
 .estimate-table tfoot th, .estimate-table tfoot td { border-bottom: 0; }
+
+/* Project form: subcontractors proposed from the estimate */
+.proposed-subs { list-style: none; margin: 0 0 var(--space-2); padding: 0; border-top: 1px solid var(--line); }
+.proposed-subs li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: 12px 0; border-bottom: 1px solid var(--line); }
+.proposed-subs .gh-check { align-items: flex-start; }
+.proposed-subs .gh-check input { margin-top: 2px; flex: none; }
+.proposed-sub-name { display: flex; flex-direction: column; gap: 2px; }
+.proposed-sub-amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.assignment-note { white-space: pre-line; }

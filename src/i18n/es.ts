@@ -784,6 +784,10 @@ const es = {
     saveFailed: "No pudimos guardar los cambios. Inténtalo de nuevo.",
     fromBidNote: (title: string) => `Se crea a partir del bid “${title}”. Revisa los datos copiados.`,
     bidAlreadyHasProject: "Este bid ya tiene un proyecto.",
+    sectionSubs: "Subcontratistas",
+    subsFromEstimateHelp: "Vienen de las cotizaciones usadas en el estimado. El monto acordado es el costo de esos conceptos. Desmarca los que no quieras asignar.",
+    quoteRef: (refs: string) => `Cotización ${refs}`,
+    subsAssignFailed: "No pudimos asignar los subcontratistas, así que no se creó el proyecto. Inténtalo de nuevo.",
     deleteProject: "Eliminar proyecto",
     deleteConfirm: (name: string, moves: number) =>
       `Se eliminará ${name} con sus asignaciones y ${moves} movimiento${moves === 1 ? "" : "s"}. No se puede deshacer.`,

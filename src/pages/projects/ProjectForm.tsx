@@ -2,11 +2,12 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { PROJECT_COLUMNS, PROJECT_STATUSES, type Project, type ProjectStatus } from "../../lib/projects";
-import { BID_COLUMNS, parseMoney, type Bid } from "../../lib/sales";
+import { BID_COLUMNS, formatMoney, parseMoney, type Bid } from "../../lib/sales";
+import { assignmentsFromEstimate, type ProposedAssignment } from "../../lib/estimates";
 import { PageHeader } from "../../components/ui";
 import MoneyField from "../../components/MoneyField";
 import { AlertCircleIcon } from "../Icons";
-import { useT } from "../../i18n";
+import { tradeLabel, useT } from "../../i18n";
 
 type Values = {
   name: string;
@@ -46,6 +47,8 @@ export default function ProjectForm() {
   const [values, setValues] = useState<Values>(EMPTY);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [sourceBid, setSourceBid] = useState<Bid | null>(null);
+  const [proposed, setProposed] = useState<(ProposedAssignment & { name: string; inactive: boolean })[]>([]);
+  const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const [existingProjectId, setExistingProjectId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -57,15 +60,19 @@ export default function ProjectForm() {
     let active = true;
     (async () => {
       const none = Promise.resolve({ data: null, error: null });
-      const [c, p, b, existing] = await Promise.all([
+      const [c, p, b, existing, lines, quotes] = await Promise.all([
         supabase.from("clients").select("id, name").order("name"),
         id ? supabase.from("projects").select(PROJECT_COLUMNS).eq("id", id).maybeSingle() : none,
         bidId ? supabase.from("bids").select(BID_COLUMNS).eq("id", bidId).maybeSingle() : none,
         bidId ? supabase.from("projects").select("id").eq("bid_id", bidId).maybeSingle() : none,
+        bidId ? supabase.from("estimate_lines").select("position, trade, sub_quote_id, cost_amount").eq("bid_id", bidId) : none,
+        bidId
+          ? supabase.from("sub_quotes").select("id, subcontractor_id, trade, reference, sub:subcontractors(company_name, status)").eq("bid_id", bidId)
+          : none,
       ]);
       if (!active) return;
       setLoading(false);
-      if (c.error || p.error || b.error || existing.error || (id && !p.data)) return setLoadFailed(true);
+      if (c.error || p.error || b.error || existing.error || lines.error || quotes.error || (id && !p.data)) return setLoadFailed(true);
       setClients((c.data ?? []) as { id: string; name: string }[]);
 
       if (p.data) {
@@ -86,6 +93,16 @@ export default function ProjectForm() {
         const bid = b.data as Bid;
         setSourceBid(bid);
         setExistingProjectId((existing.data as { id: string } | null)?.id ?? null);
+        type QuoteRow = { id: string; subcontractor_id: string; trade: string | null; reference: string | null; sub: { company_name: string; status: string } | null };
+        const qs = (quotes.data ?? []) as unknown as QuoteRow[];
+        const subOf = new Map(qs.map((q) => [q.subcontractor_id, q.sub]));
+        setProposed(
+          assignmentsFromEstimate((lines.data ?? []) as never, qs).map((a) => ({
+            ...a,
+            name: subOf.get(a.subcontractor_id)?.company_name ?? "—",
+            inactive: subOf.get(a.subcontractor_id)?.status === "inactive",
+          })),
+        );
         setValues({
           ...EMPTY,
           name: bid.title,
@@ -134,11 +151,30 @@ export default function ProjectForm() {
     const result = editing
       ? await supabase.from("projects").update(payload).eq("id", id!).select("id").single()
       : await supabase.from("projects").insert(payload).select("id").single();
-    setBusy(false);
     if (result.error || !result.data) {
+      setBusy(false);
       // unique(bid_id): someone created the project from this bid in the meantime
       return setError(/bid_id|duplicate/i.test(result.error?.message ?? "") ? t.projects.bidAlreadyHasProject : t.projects.saveFailed);
     }
+    const assign = editing ? [] : proposed.filter((a) => !skipped.has(a.key));
+    if (assign.length) {
+      const subs = await supabase.from("project_subs").insert(
+        assign.map((a) => ({
+          project_id: result.data.id,
+          subcontractor_id: a.subcontractor_id,
+          trade: a.trade ? tradeLabel(a.trade, t) : null,
+          agreed_amount: a.agreed_amount,
+          notes: a.references.length ? t.projects.quoteRef(a.references.join(", ")) : null,
+        })),
+      );
+      if (subs.error) {
+        // All or nothing: without its assignments the new project would look complete but isn't.
+        await supabase.from("projects").delete().eq("id", result.data.id);
+        setBusy(false);
+        return setError(t.projects.subsAssignFailed);
+      }
+    }
+    setBusy(false);
     navigate(`/proyectos/${result.data.id}`, { replace: editing });
   };
 
@@ -260,6 +296,42 @@ export default function ProjectForm() {
             />
           </div>
         </fieldset>
+
+        {proposed.length > 0 && (
+          <fieldset className="form-section">
+            <legend className="gh-label">{t.projects.sectionSubs}</legend>
+            <ul className="proposed-subs">
+              {proposed.map((a) => (
+                <li key={a.key}>
+                  <label className="gh-check">
+                    <input
+                      type="checkbox"
+                      checked={!skipped.has(a.key)}
+                      onChange={(e) =>
+                        setSkipped((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.delete(a.key);
+                          else next.add(a.key);
+                          return next;
+                        })
+                      }
+                    />
+                    <span className="proposed-sub-name">
+                      {a.name}
+                      {(a.trade || a.inactive) && (
+                        <span className="gh-small gh-muted">
+                          {[a.trade ? tradeLabel(a.trade, t) : null, a.inactive ? t.subs.statuses.inactive : null].filter(Boolean).join(" · ")}
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                  <span className="proposed-sub-amount">{formatMoney(a.agreed_amount, t.locale)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="gh-help">{t.projects.subsFromEstimateHelp}</p>
+          </fieldset>
+        )}
 
         <fieldset className="form-section">
           <legend className="gh-label">{t.projects.notes}</legend>
