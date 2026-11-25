@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { BID_COLUMNS, BID_STATUSES, formatMoney, formatPct, marginOf, type Bid, type BidStatus } from "../../lib/sales";
 import { formatDate, todayISO } from "../../lib/subcontractors";
 import DeleteZone from "../../components/DeleteZone";
 import RecordLinks from "../../components/RecordLinks";
+import BidEstimate from "./BidEstimate";
 import { AlertCircleIcon } from "../Icons";
 import { Facts, NoteBlock, Panel } from "../../components/Panel";
 import { DueNote } from "./bidTags";
@@ -24,6 +25,13 @@ export default function BidDetail() {
   const [sourceLead, setSourceLead] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  /** The bid's cost and price come from its estimate lines (and can't be typed by hand). */
+  const [fromEstimate, setFromEstimate] = useState(false);
+
+  const onTotals = useCallback((totals: { cost: number; price: number } | null) => {
+    setFromEstimate(!!totals);
+    if (totals) setBid((b) => (b ? { ...b, estimated_value: totals.cost, our_price: totals.price } : b));
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -158,10 +166,12 @@ export default function BidDetail() {
         <div className="money-card">
           <p className="gh-label">{t.sales.ourPrice}</p>
           <p className="money-value">{formatMoney(bid.our_price, t.locale)}</p>
+          {fromEstimate && <span className="money-sub">{t.estimates.fromEstimate}</span>}
         </div>
         <div className="money-card">
           <p className="gh-label">{t.sales.estimatedValue}</p>
           <p className="money-value">{formatMoney(bid.estimated_value, t.locale)}</p>
+          {fromEstimate && <span className="money-sub">{t.estimates.fromEstimate}</span>}
         </div>
         <div className={`money-card${margin && margin.amount < 0 ? " is-negative" : ""}`}>
           <p className="gh-label">{t.sales.margin}</p>
@@ -193,6 +203,7 @@ export default function BidDetail() {
       </div>
 
       <div className="detail-stack">
+        <BidEstimate bidId={bid.id} onTotals={onTotals} />
         <RecordLinks bidId={bid.id} />
       </div>
 

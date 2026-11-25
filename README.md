@@ -41,7 +41,8 @@ npm run dev
    Luego `supabase/migrations/0007_settings.sql` (configuración editable desde la app). Aplícala **antes** de desplegar la versión de la app que la usa.
    Luego `supabase/migrations/0008_change_orders.sql` (órdenes de cambio de los proyectos y su detalle en el portal). Aplícala **antes** de desplegar la versión de la app que la usa.
    Luego `supabase/migrations/0009_change_order_decisions.sql` (quién aprobó o rechazó cada orden). Aplícala **antes** de desplegar la app y la función `email-alerts` que la usan.
-   Por último `supabase/migrations/0010_record_links.sql` (enlaces a archivos de bids y proyectos en Google Drive; no usa Storage). Aplícala **antes** de desplegar la versión de la app que la usa.
+   Luego `supabase/migrations/0010_record_links.sql` (enlaces a archivos de bids y proyectos en Google Drive; no usa Storage). Aplícala **antes** de desplegar la versión de la app que la usa.
+   Por último `supabase/migrations/0011_estimates.sql` (cotizaciones de subcontratistas y partidas del estimado de cada bid). Aplícala **antes** de desplegar la versión de la app que la usa.
 2. Despliega la función de gestión de usuarios (ver abajo). Desde ese momento, un super admin invita, cambia roles y quita accesos en **Equipo** (`/equipo`), sin entrar a Supabase.
 
 | Rol | Acceso |
