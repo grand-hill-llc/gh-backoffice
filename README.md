@@ -54,7 +54,8 @@ Necesitan Node 22.6 o superior. No usan Supabase ni red: las de `tests/sql` apli
    Luego `supabase/migrations/0011_estimates.sql` (cotizaciones de subcontratistas y conceptos del estimado de cada bid). Aplícala **antes** de desplegar la versión de la app que la usa.
    Luego `supabase/migrations/0012_proposal_settings.sql` (datos de la empresa, condiciones y vigencia de la propuesta al cliente). Aplícala **antes** de desplegar la versión de la app que la usa.
    Luego `supabase/migrations/0013_proposal_links.sql` (enlace para que el cliente acepte o rechace la propuesta en línea). Aplícala **antes** de desplegar la app, y vuelve a desplegar `email-alerts` para avisar al equipo de cada respuesta.
-   Por último `supabase/migrations/0014_proposal_emails.sql` (registro de las propuestas enviadas por correo desde la app). Aplícala **antes** de desplegar la app y despliega la función `send-proposal` (ver "Envío de propuestas por correo").
+   Luego `supabase/migrations/0014_proposal_emails.sql` (registro de las propuestas enviadas por correo desde la app). Aplícala **antes** de desplegar la app y despliega la función `send-proposal` (ver "Envío de propuestas por correo").
+   Por último `supabase/migrations/0015_staff_language.sql` (idioma de los avisos al equipo: resumen diario, respuestas a propuestas y nota de las solicitudes del sitio web). Aplícala **antes** de desplegar la app y vuelve a desplegar `email-alerts` y `website-lead`.
 2. Despliega la función de gestión de usuarios (ver abajo). Desde ese momento, un super admin invita, cambia roles y quita accesos en **Equipo** (`/equipo`), sin entrar a Supabase.
 
 | Rol | Acceso |

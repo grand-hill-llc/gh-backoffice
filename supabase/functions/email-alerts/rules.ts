@@ -89,7 +89,11 @@ export type AlertSettings = {
   /** Days before expiry to remind, e.g. [30, 15, 7]. */
   expiryDays: number[];
   subsEnabled: boolean;
+  /** Language of the emails to the team (digest, proposal answers). Subcontractor emails are always bilingual. */
+  staffLang: StaffLang;
 };
+
+export type StaffLang = "es" | "en";
 
 export const DEFAULT_SETTINGS: AlertSettings = {
   digestEnabled: true,
@@ -97,6 +101,75 @@ export const DEFAULT_SETTINGS: AlertSettings = {
   digestMuted: [],
   expiryDays: [30, 15, 7],
   subsEnabled: false,
+  staffLang: "es",
+};
+
+export const cleanLang = (v: unknown): StaffLang => (v === "en" ? "en" : "es");
+
+const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+
+/** Wording of the emails to the team, in the language chosen in Configuración. */
+const STAFF = {
+  es: {
+    locale: "es-US" as const,
+    digestSubject: (n: number) => `Grand Hill · ${n} ${plural(n, "pendiente", "pendientes")} de hoy`,
+    hello: (name: string | null) => (name ? `Hola ${name}, esto requiere atención` : "Esto requiere atención"),
+    openDashboard: "Abrir el resumen",
+    toApprove: "Órdenes de cambio por aprobar",
+    toClient: (amount: string) => `Al cliente ${amount}`,
+    requestedToday: "Solicitada hoy",
+    waiting: (n: number) => `Pendiente hace ${n} ${plural(n, "día", "días")}`,
+    toReview: "Documentos por revisar",
+    fromPortal: "Enviado desde el portal",
+    expiring: "Documentos vencidos o por vencer",
+    expiredAgo: (n: number) => `Vencido hace ${n} ${plural(n, "día", "días")}`,
+    expiresToday: "Vence hoy",
+    expiresIn: (n: number) => `Vence en ${n} ${plural(n, "día", "días")}`,
+    followUps: "Seguimientos de leads",
+    dueToday: "Para hoy",
+    late: (n: number) => `Atrasado ${n} ${plural(n, "día", "días")}`,
+    noOwner: "Sin responsable",
+    accepted: "Propuesta aceptada",
+    rejected: "Propuesta rechazada",
+    theClient: "El cliente",
+    forAmount: (amount: string) => ` por ${amount}`,
+    acceptedLead: (who: string, bid: string, rest: string) => `${who} aceptó la propuesta de ${bid}${rest}. El bid pasó a Ganado.`,
+    rejectedLead: (who: string, bid: string, rest: string) => `${who} rechazó la propuesta de ${bid}${rest}.`,
+    email: (v: string) => `Correo: ${v}`,
+    comment: (v: string) => `Comentario: ${v}`,
+    openBidCreate: "Abrir el bid y crear el proyecto",
+    openBid: "Abrir el bid",
+  },
+  en: {
+    locale: "en-US" as const,
+    digestSubject: (n: number) => `Grand Hill · ${n} ${plural(n, "item", "items")} for today`,
+    hello: (name: string | null) => (name ? `Hi ${name}, this needs attention` : "This needs attention"),
+    openDashboard: "Open the overview",
+    toApprove: "Change orders to approve",
+    toClient: (amount: string) => `To the client ${amount}`,
+    requestedToday: "Requested today",
+    waiting: (n: number) => `Pending for ${n} ${plural(n, "day", "days")}`,
+    toReview: "Documents to review",
+    fromPortal: "Sent from the portal",
+    expiring: "Expired or expiring documents",
+    expiredAgo: (n: number) => `Expired ${n} ${plural(n, "day", "days")} ago`,
+    expiresToday: "Expires today",
+    expiresIn: (n: number) => `Expires in ${n} ${plural(n, "day", "days")}`,
+    followUps: "Lead follow-ups",
+    dueToday: "Due today",
+    late: (n: number) => `${n} ${plural(n, "day", "days")} late`,
+    noOwner: "No owner",
+    accepted: "Proposal accepted",
+    rejected: "Proposal declined",
+    theClient: "The client",
+    forAmount: (amount: string) => ` for ${amount}`,
+    acceptedLead: (who: string, bid: string, rest: string) => `${who} accepted the proposal for ${bid}${rest}. The bid is now Won.`,
+    rejectedLead: (who: string, bid: string, rest: string) => `${who} declined the proposal for ${bid}${rest}.`,
+    email: (v: string) => `Email: ${v}`,
+    comment: (v: string) => `Comment: ${v}`,
+    openBidCreate: "Open the bid and create the project",
+    openBid: "Open the bid",
+  },
 };
 
 const TZ = "America/New_York";
@@ -171,6 +244,7 @@ export function planEmails(input: PlanInput): Email[] {
   const changeOrders = input.changeOrders ?? [];
   const proposals = input.proposals ?? [];
   const { subsEnabled, digestEnabled, digestHour, digestMuted } = settings;
+  const c = STAFF[cleanLang(settings.staffLang)];
   const expiryDays = cleanDays(settings.expiryDays);
   const { today, weekday } = floridaClock(now);
   const emails: Email[] = [];
@@ -199,7 +273,7 @@ export function planEmails(input: PlanInput): Email[] {
   for (const pr of proposals) {
     if (now.getTime() - Date.parse(pr.decided_at) > REVIEW_LOOKBACK_MS) continue;
     const to = staffProfiles.filter((p) => p.id === pr.created_by || p.role === "super_admin");
-    for (const p of to) emails.push(proposalEmail(pr, p, appUrl));
+    for (const p of to) emails.push(proposalEmail(pr, p, appUrl, c));
   }
 
   if (!force && !isMorningWindow(now, digestHour)) return emails;
@@ -246,8 +320,8 @@ export function planEmails(input: PlanInput): Email[] {
       key: `digest:${today}:${p.id}`,
       kind: "digest",
       to: p.email as string,
-      subject: `Grand Hill · ${total} ${total === 1 ? "pendiente" : "pendientes"} de hoy`,
-      ...digestBody({ p, today, docAlerts, toReview, toApprove, leads: mine, appUrl }),
+      subject: c.digestSubject(total),
+      ...digestBody({ p, today, docAlerts, toReview, toApprove, leads: mine, appUrl, c }),
     });
   }
   return emails;
@@ -284,10 +358,12 @@ function section(title: string, rows: { href: string; main: string; meta: string
   return `<h2 style="margin:22px 0 6px;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:#6b7078">${esc(title)} (${rows.length})</h2><table style="width:100%;border-collapse:collapse">${items}</table>`;
 }
 
-function leftLabel(left: number): string {
-  if (left < 0) return `Vencido hace ${-left} ${left === -1 ? "día" : "días"}`;
-  if (left === 0) return "Vence hoy";
-  return `Vence en ${left} ${left === 1 ? "día" : "días"}`;
+type StaffCopy = (typeof STAFF)[StaffLang];
+
+function leftLabel(left: number, c: StaffCopy): string {
+  if (left < 0) return c.expiredAgo(-left);
+  if (left === 0) return c.expiresToday;
+  return c.expiresIn(left);
 }
 
 function digestBody(args: {
@@ -298,19 +374,21 @@ function digestBody(args: {
   toApprove: ChangeOrderRow[];
   leads: Lead[];
   appUrl: string;
+  c: StaffCopy;
 }) {
-  const { p, today, docAlerts, toReview, toApprove, leads, appUrl } = args;
+  const { p, today, docAlerts, toReview, toApprove, leads, appUrl, c } = args;
+  const lang = c.locale === "en-US" ? "en" : "es";
   const sections = [
     {
-      title: "Órdenes de cambio por aprobar",
+      title: c.toApprove,
       rows: toApprove.map((co) => {
         const waiting = daysUntil(today, co.requested_on);
         return {
           href: `${appUrl}/proyectos/${co.project_id}`,
           main: `${co.project_name} · CO ${co.number} · ${co.title}`,
           meta: [
-            Number(co.contract_delta) ? `Al cliente ${signed(Number(co.contract_delta), "es-US")}` : null,
-            waiting <= 0 ? "Solicitada hoy" : `Pendiente hace ${waiting} ${waiting === 1 ? "día" : "días"}`,
+            Number(co.contract_delta) ? c.toClient(signed(Number(co.contract_delta), c.locale)) : null,
+            waiting <= 0 ? c.requestedToday : c.waiting(waiting),
           ]
             .filter(Boolean)
             .join(" · "),
@@ -318,28 +396,28 @@ function digestBody(args: {
       }),
     },
     {
-      title: "Documentos por revisar",
-      rows: toReview.map((d) => ({ href: `${appUrl}/subcontratistas/${d.subcontractor_id}`, main: `${d.company_name} · ${docLabel(d.doc_type).es}`, meta: "Enviado desde el portal" })),
+      title: c.toReview,
+      rows: toReview.map((d) => ({ href: `${appUrl}/subcontratistas/${d.subcontractor_id}`, main: `${d.company_name} · ${docLabel(d.doc_type)[lang]}`, meta: c.fromPortal })),
     },
     {
-      title: "Documentos vencidos o por vencer",
-      rows: docAlerts.map(({ d, left }) => ({ href: `${appUrl}/subcontratistas/${d.subcontractor_id}`, main: `${d.company_name} · ${docLabel(d.doc_type).es}`, meta: `${leftLabel(left)} · ${fmtDate(d.expires_on as string, "es-US")}` })),
+      title: c.expiring,
+      rows: docAlerts.map(({ d, left }) => ({ href: `${appUrl}/subcontratistas/${d.subcontractor_id}`, main: `${d.company_name} · ${docLabel(d.doc_type)[lang]}`, meta: `${leftLabel(left, c)} · ${fmtDate(d.expires_on as string, c.locale)}` })),
     },
     {
-      title: "Seguimientos de leads",
+      title: c.followUps,
       rows: leads.map((l) => {
         const late = daysUntil(today, l.next_follow_up as string);
         return {
           href: `${appUrl}/leads/${l.id}`,
           main: l.company ? `${l.name} · ${l.company}` : l.name,
-          meta: `${late === 0 ? "Para hoy" : `Atrasado ${late} ${late === 1 ? "día" : "días"}`}${l.owner_id ? "" : " · Sin responsable"}`,
+          meta: `${late === 0 ? c.dueToday : c.late(late)}${l.owner_id ? "" : ` · ${c.noOwner}`}`,
         };
       }),
     },
   ];
   const first = p.full_name?.trim().split(/\s+/)[0];
-  const title = first ? `Hola ${first}, esto requiere atención` : "Esto requiere atención";
-  const html = layout(title, sections.map((s) => section(s.title, s.rows)).join(""), { href: `${appUrl}/dashboard`, label: "Abrir el resumen" });
+  const title = c.hello(first ?? null);
+  const html = layout(title, sections.map((s) => section(s.title, s.rows)).join(""), { href: `${appUrl}/dashboard`, label: c.openDashboard });
   const text = [title, ...sections.filter((s) => s.rows.length).map((s) => `\n${s.title}\n${s.rows.map((r) => `- ${r.main} (${r.meta}): ${r.href}`).join("\n")}`), `\n${appUrl}/dashboard`].join("\n");
   return { html, text };
 }
@@ -353,16 +431,14 @@ function signed(value: number, locale: "es-US" | "en-US"): string {
   return `${value < 0 ? "−" : "+"}${money(Math.abs(value), locale)}`;
 }
 
-function proposalEmail(pr: ProposalDecision, p: Profile, appUrl: string): Email {
+function proposalEmail(pr: ProposalDecision, p: Profile, appUrl: string, c: StaffCopy): Email {
   const accepted = pr.status === "accepted";
-  const who = pr.signer_name || "El cliente";
-  const amount = pr.total === null ? "" : ` por ${money(Number(pr.total), "es-US")}`;
+  const who = pr.signer_name || c.theClient;
+  const amount = pr.total === null ? "" : c.forAmount(money(Number(pr.total), c.locale));
   const client = pr.client_name ? ` (${pr.client_name})` : "";
-  const title = accepted ? "Propuesta aceptada" : "Propuesta rechazada";
-  const lead = accepted
-    ? `${who} aceptó la propuesta de ${pr.bid_title}${client}${amount}. El bid pasó a Ganado.`
-    : `${who} rechazó la propuesta de ${pr.bid_title}${client}${amount}.`;
-  const details = [pr.signer_email ? `Correo: ${pr.signer_email}` : null, pr.client_note ? `Comentario: ${pr.client_note}` : null].filter(Boolean) as string[];
+  const title = accepted ? c.accepted : c.rejected;
+  const lead = accepted ? c.acceptedLead(who, pr.bid_title, `${client}${amount}`) : c.rejectedLead(who, pr.bid_title, `${client}${amount}`);
+  const details = [pr.signer_email ? c.email(pr.signer_email) : null, pr.client_note ? c.comment(pr.client_note) : null].filter(Boolean) as string[];
   const href = `${appUrl}/bids/${pr.bid_id}`;
   return {
     key: `proposal:${pr.id}:${pr.decided_at}:${p.id}`,
@@ -372,7 +448,7 @@ function proposalEmail(pr: ProposalDecision, p: Profile, appUrl: string): Email 
     html: layout(
       title,
       `<p style="font-size:15px;line-height:1.5">${esc(lead)}</p>${details.map((x) => `<p style="font-size:14px;line-height:1.5;color:#6b7078;margin:6px 0">${esc(x)}</p>`).join("")}`,
-      { href, label: accepted ? "Abrir el bid y crear el proyecto" : "Abrir el bid" },
+      { href, label: accepted ? c.openBidCreate : c.openBid },
     ),
     text: [lead, ...details, "", href].join("\n"),
   };
