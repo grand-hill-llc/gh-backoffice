@@ -190,5 +190,6 @@ Secretos opcionales: `PROPOSALS_FROM` (remitente), `PROPOSALS_REPLY_TO` y `APP_U
 - `/` redirige según el rol
 - `/dashboard`, `/leads`, `/bids`, `/clientes`, `/subcontratistas`, `/proyectos` personal interno (super admin y admin), cada uno con `/nuevo`, `/:id` y `/:id/editar`
 - `/proyectos/nuevo?bid=<id>` crea un proyecto copiando los datos de un bid ganado
+- `/exportar` CSV para contabilidad (super admin y admin): movimientos, proyectos, órdenes de cambio y subcontratistas, en formato Excel o, para movimientos y subcontratistas, listo para importar en QuickBooks
 - `/equipo` solo super admin
 - `/portal` solo subcontratistas
