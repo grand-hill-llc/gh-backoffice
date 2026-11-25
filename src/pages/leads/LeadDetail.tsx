@@ -16,6 +16,7 @@ import { formatDate, todayISO } from "../../lib/subcontractors";
 import DeleteZone from "../../components/DeleteZone";
 import { Facts, mailHref, NoteBlock, Panel, telHref } from "../../components/Panel";
 import { AlertCircleIcon } from "../Icons";
+import StatusSteps from "../../components/StatusSteps";
 import LeadActivityPanel from "./LeadActivityPanel";
 import { FollowUpNote, LeadStatusTag, SourceLabel, useOwners } from "./leadShared";
 import { useT } from "../../i18n";
@@ -161,21 +162,17 @@ export default function LeadDetail() {
           {lead.bid_id && <Link className="meta-link" to={`/bids/${lead.bid_id}`}>{t.leads.viewBid}</Link>}
         </section>
       ) : (
-        <section className="status-bar" aria-labelledby="lead-stage-label">
-          <span className="gh-label" id="lead-stage-label">{t.leads.stage}</span>
-          <div className="segmented status-segmented" role="group" aria-labelledby="lead-stage-label">
-            {PICKABLE_STATUSES.map((s) => (
-              <button key={s} type="button" aria-pressed={lead.status === s} disabled={busy} onClick={() => setStatus(s)}>
-                {t.leads.statuses[s]}
-              </button>
-            ))}
-          </div>
-          {msg && (
-            <p className={msg.ok ? "gh-ok" : "gh-error"} role="status">
-              {msg.text}
-            </p>
-          )}
-        </section>
+        <StatusSteps
+          id="lead-stage-label"
+          label={t.leads.stage}
+          steps={PICKABLE_STATUSES.filter((s) => s !== "lost")}
+          endings={PICKABLE_STATUSES.filter((s) => s === "lost")}
+          value={lead.status}
+          labels={t.leads.statuses}
+          busy={busy}
+          onChange={setStatus}
+          message={msg}
+        />
       )}
 
       {lead.status === "lost" && (

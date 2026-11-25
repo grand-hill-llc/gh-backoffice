@@ -21,7 +21,8 @@ import { formatDate } from "../../lib/subcontractors";
 import DeleteZone from "../../components/DeleteZone";
 import RecordLinks from "../../components/RecordLinks";
 import { Facts, NoteBlock, Panel } from "../../components/Panel";
-import { AlertCircleIcon } from "../Icons";
+import { AlertCircleIcon, BuildingIcon } from "../Icons";
+import StatusSteps from "../../components/StatusSteps";
 import { CollectedBar } from "./projectTags";
 import ProjectSubs, { type AssignmentRow, type SubOption, type WorkUpdate } from "./ProjectSubs";
 import ProjectMovements from "./ProjectMovements";
@@ -166,7 +167,10 @@ export default function ProjectDetail() {
         </div>
         <div className="detail-meta">
           {project.client ? (
-            <Link className="meta-link" to={`/clientes/${project.client.id}`}>{project.client.name}</Link>
+            <Link className="meta-link meta-client" to={`/clientes/${project.client.id}`}>
+              <BuildingIcon />
+              {project.client.name}
+            </Link>
           ) : (
             <span className="gh-small gh-muted">{t.projects.noClient}</span>
           )}
@@ -178,21 +182,16 @@ export default function ProjectDetail() {
         </div>
       </header>
 
-      <section className="status-bar" aria-labelledby="project-status-label">
-        <span className="gh-label" id="project-status-label">{t.projects.status}</span>
-        <div className="segmented status-segmented" role="group" aria-labelledby="project-status-label">
-          {PROJECT_STATUSES.map((s) => (
-            <button key={s} type="button" aria-pressed={project.status === s} disabled={statusBusy} onClick={() => changeStatus(s)}>
-              {t.projects.statuses[s]}
-            </button>
-          ))}
-        </div>
-        {statusMsg && (
-          <p className={statusMsg.ok ? "gh-ok" : "gh-error"} role="status">
-            {statusMsg.text}
-          </p>
-        )}
-      </section>
+      <StatusSteps
+        id="project-status-label"
+        label={t.projects.status}
+        steps={PROJECT_STATUSES}
+        value={project.status}
+        labels={t.projects.statuses}
+        busy={statusBusy}
+        onChange={changeStatus}
+        message={statusMsg}
+      />
 
       <div className="money-grid">
         <div className="money-card">

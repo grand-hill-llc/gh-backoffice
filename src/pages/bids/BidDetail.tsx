@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
-import { BID_COLUMNS, BID_STATUSES, formatMoney, formatPct, marginOf, type Bid, type BidStatus } from "../../lib/sales";
+import { BID_COLUMNS, formatMoney, formatPct, marginOf, type Bid, type BidStatus } from "../../lib/sales";
 import { formatDate, todayISO } from "../../lib/subcontractors";
 import DeleteZone from "../../components/DeleteZone";
 import RecordLinks from "../../components/RecordLinks";
 import BidEstimate from "./BidEstimate";
-import { AlertCircleIcon } from "../Icons";
+import BidProposalLinks from "./BidProposalLinks";
+import { AlertCircleIcon, BuildingIcon } from "../Icons";
+import StatusSteps from "../../components/StatusSteps";
 import { Facts, NoteBlock, Panel } from "../../components/Panel";
 import { DueNote } from "./bidTags";
 import { useT } from "../../i18n";
@@ -129,13 +131,15 @@ export default function BidDetail() {
                 <Link className="gh-btn gh-btn-primary gh-btn-sm" to={`/proyectos/nuevo?bid=${bid.id}`}>{t.projects.createFromBid}</Link>
               )
             )}
-            <Link className="gh-btn gh-btn-secondary gh-btn-sm" to={`/bids/${bid.id}/propuesta`}>{t.proposal.open}</Link>
             <Link className="gh-btn gh-btn-secondary gh-btn-sm" to={`/bids/${bid.id}/editar`}>{t.common.edit}</Link>
           </div>
         </div>
         <div className="detail-meta">
           {bid.client ? (
-            <Link className="meta-link" to={`/clientes/${bid.client.id}`}>{bid.client.name}</Link>
+            <Link className="meta-link meta-client" to={`/clientes/${bid.client.id}`}>
+              <BuildingIcon />
+              {bid.client.name}
+            </Link>
           ) : (
             <span className="gh-small gh-muted">{t.sales.noClient}</span>
           )}
@@ -147,21 +151,18 @@ export default function BidDetail() {
         </div>
       </header>
 
-      <section className="status-bar" aria-labelledby="status-bar-label">
-        <span className="gh-label" id="status-bar-label">{t.sales.status}</span>
-        <div className="segmented status-segmented" role="group" aria-labelledby="status-bar-label">
-          {BID_STATUSES.map((s) => (
-            <button key={s} type="button" aria-pressed={bid.status === s} disabled={statusBusy} onClick={() => changeStatus(s)}>
-              {t.sales.bidStatuses[s]}
-            </button>
-          ))}
-        </div>
-        {statusMsg && (
-          <p className={statusMsg.ok ? "gh-ok" : "gh-error"} role="status">
-            {statusMsg.text}
-          </p>
-        )}
-      </section>
+      <StatusSteps
+        id="bid-status-label"
+        label={t.sales.status}
+        steps={["new", "estimating", "submitted", "won"] as BidStatus[]}
+        endings={["lost", "declined"] as BidStatus[]}
+        success="won"
+        value={bid.status}
+        labels={t.sales.bidStatuses}
+        busy={statusBusy}
+        onChange={changeStatus}
+        message={statusMsg}
+      />
 
       <div className="money-grid">
         <div className="money-card">
@@ -205,6 +206,7 @@ export default function BidDetail() {
 
       <div className="detail-stack">
         <BidEstimate bidId={bid.id} onTotals={onTotals} />
+        <BidProposalLinks bidId={bid.id} />
         <RecordLinks bidId={bid.id} />
       </div>
 

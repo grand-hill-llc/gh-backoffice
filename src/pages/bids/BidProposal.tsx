@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { ESTIMATE_LINE_COLUMNS, estimateTotals, type EstimateLine } from "../../lib/estimates";
-import { formatMoney } from "../../lib/sales";
 import { todayISO } from "../../lib/subcontractors";
 import { usePrefs, type Lang } from "../../lib/prefs";
-import { AlertCircleIcon } from "../Icons";
+import ProposalSheet, { type ProposalContent } from "../../components/ProposalSheet";
+import { AlertCircleIcon, CheckCircleIcon } from "../Icons";
 import { dictFor, useT } from "../../i18n";
 
 type BidRow = {
@@ -32,34 +32,14 @@ const SETTINGS_COLUMNS =
 
 function addDays(iso: string, days: number): string {
   const [y, m, d] = iso.split("-").map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d + days));
-  return date.toISOString().slice(0, 10);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
-function longDate(iso: string, locale: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
-}
-
-/** Paragraphs from text with line breaks. */
-function Paragraphs({ text }: { text: string }) {
-  return (
-    <>
-      {text
-        .split(/\n+/)
-        .map((p) => p.trim())
-        .filter(Boolean)
-        .map((p, i) => (
-          <p key={i}>{p}</p>
-        ))}
-    </>
-  );
-}
+export const proposalUrl = (token: string) => `${window.location.origin}/p/${token}`;
 
 /**
- * Printable client proposal for a bid. Staff only (it reads internal tables), but it shows only
- * what the client may see: descriptions and selling prices, never cost or markup.
- * Always light, like paper, whatever the app theme.
+ * Client proposal for a bid: preview to print or save as PDF, and the place to create the
+ * online link for the client. Staff only. Shows only what the client may see.
  */
 export default function BidProposal() {
   const { id } = useParams();
@@ -71,6 +51,9 @@ export default function BidProposal() {
   const [settings, setSettings] = useState<ProposalSettings | null>(null);
   const [showLines, setShowLines] = useState(true);
   const [state, setState] = useState<"loading" | "ready" | "missing" | "failed">("loading");
+  const [sharing, setSharing] = useState(false);
+  const [shared, setShared] = useState<{ url: string; error?: undefined } | { url?: undefined; error: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -102,6 +85,12 @@ export default function BidProposal() {
     };
   }, [bid, lang]);
 
+  // A different language or layout is a different proposal: the link shown no longer matches it.
+  useEffect(() => {
+    setShared(null);
+    setCopied(false);
+  }, [lang, showLines]);
+
   if (state === "loading") return <p className="gh-muted proposal-status" role="status">{ui.common.loading}</p>;
   if (state !== "ready" || !bid)
     return (
@@ -114,15 +103,58 @@ export default function BidProposal() {
       </div>
     );
 
-  const t = dictFor(lang).proposal;
-  const locale = dictFor(lang).locale;
-  const money = (v: number) => formatMoney(v, locale);
   const today = todayISO();
-  const validity = settings?.proposal_validity_days ?? 30;
   const total = lines.length ? estimateTotals(lines).price : bid.our_price !== null ? Number(bid.our_price) : null;
-  const company = [settings?.company_address, settings?.company_phone, settings?.company_email].filter(Boolean) as string[];
-  const contact = bid.client ? [bid.client.contact_name, bid.client.email, bid.client.phone].filter(Boolean) : [];
-  const withLines = showLines && lines.length > 0;
+  const content: ProposalContent = {
+    version: 1,
+    reference: bid.id.slice(0, 8).toUpperCase(),
+    date: today,
+    valid_until: addDays(today, settings?.proposal_validity_days ?? 30),
+    company: {
+      address: settings?.company_address ?? null,
+      phone: settings?.company_phone ?? null,
+      email: settings?.company_email ?? null,
+      license: settings?.company_license ?? null,
+    },
+    client: {
+      name: bid.client?.name ?? null,
+      contact: bid.client ? ([bid.client.contact_name, bid.client.email, bid.client.phone].filter(Boolean) as string[]) : [],
+    },
+    project: { title: bid.title, location: bid.location },
+    scope: bid.scope,
+    lines:
+      showLines && lines.length
+        ? lines.map((l) => ({ description: l.description, quantity: Number(l.quantity), unit: l.unit, amount: Number(l.price_amount) }))
+        : null,
+    total,
+    terms: settings?.proposal_terms ?? null,
+  };
+
+  const createLink = async () => {
+    setSharing(true);
+    setShared(null);
+    setCopied(false);
+    const { data, error } = await supabase
+      .from("proposal_links")
+      .insert({ bid_id: bid.id, lang, content, total, valid_until: content.valid_until })
+      .select("token")
+      .single();
+    setSharing(false);
+    if (error || !data) {
+      setShared({ error: /schema cache|does not exist|relation/i.test(error?.message ?? "") ? ui.proposal.linkMissingTable : ui.proposal.linkFailed });
+      return;
+    }
+    setShared({ url: proposalUrl((data as { token: string }).token) });
+  };
+
+  const copy = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
 
   return (
     <div className="proposal-page">
@@ -142,113 +174,45 @@ export default function BidProposal() {
               <button type="button" aria-pressed={!showLines} onClick={() => setShowLines(false)}>{ui.proposal.showLinesOff}</button>
             </div>
           )}
-          <button className="gh-btn gh-btn-primary gh-btn-sm" type="button" onClick={() => window.print()} disabled={total === null}>
-            {ui.proposal.print}
-          </button>
+          <div className="proposal-actions">
+            <button className="gh-btn gh-btn-secondary gh-btn-sm" type="button" onClick={() => window.print()} disabled={total === null}>
+              {ui.proposal.print}
+            </button>
+            <button className="gh-btn gh-btn-primary gh-btn-sm" type="button" onClick={createLink} disabled={total === null || sharing}>
+              {sharing ? ui.proposal.creatingLink : ui.proposal.createLink}
+            </button>
+          </div>
         </div>
         {total === null ? (
           <div className="gh-notice is-error" role="alert">
             <AlertCircleIcon />
             <p>{ui.proposal.noPrice}</p>
           </div>
+        ) : shared?.url ? (
+          <div className="gh-notice is-success proposal-link-box" role="status">
+            <CheckCircleIcon />
+            <div>
+              <p>{ui.proposal.linkReady}</p>
+              <div className="proposal-link-row">
+                <input className="gh-input" readOnly value={shared.url} onFocus={(e) => e.target.select()} aria-label={ui.proposal.linkLabel} />
+                <button className="gh-btn gh-btn-secondary gh-btn-sm" type="button" onClick={() => copy(shared.url)}>
+                  {copied ? ui.proposal.copied : ui.proposal.copy}
+                </button>
+              </div>
+              <p className="gh-small">{ui.proposal.linkHelp}</p>
+            </div>
+          </div>
+        ) : shared?.error ? (
+          <div className="gh-notice is-error" role="alert">
+            <AlertCircleIcon />
+            <p>{shared.error}</p>
+          </div>
         ) : (
           <p className="gh-small gh-muted">{ui.proposal.printHint}</p>
         )}
       </div>
 
-      <article className="proposal-sheet" lang={lang}>
-        <header className="proposal-head">
-          <div>
-            <img className="proposal-logo" src="/brand/logo-on-light.svg" alt="Grand Hill" width={189} height={40} />
-            {company.length > 0 && <p className="proposal-company">{company.join(" · ")}</p>}
-            {settings?.company_license && <p className="proposal-company">{t.license(settings.company_license)}</p>}
-          </div>
-          <div className="proposal-meta">
-            <p className="proposal-kicker">{t.title}</p>
-            <dl>
-              <div><dt>{t.reference}</dt><dd>{bid.id.slice(0, 8).toUpperCase()}</dd></div>
-              <div><dt>{t.date}</dt><dd>{longDate(today, locale)}</dd></div>
-              <div><dt>{t.validUntil}</dt><dd>{longDate(addDays(today, validity), locale)}</dd></div>
-            </dl>
-          </div>
-        </header>
-
-        <section className="proposal-parties">
-          <div>
-            <p className="proposal-label">{t.preparedFor}</p>
-            <p className="proposal-strong">{bid.client?.name ?? "—"}</p>
-            {contact.map((c) => (
-              <p key={c}>{c}</p>
-            ))}
-          </div>
-          <div>
-            <p className="proposal-label">{t.project}</p>
-            <p className="proposal-strong">{bid.title}</p>
-            {bid.location && <p>{bid.location}</p>}
-          </div>
-        </section>
-
-        {bid.scope && (
-          <section className="proposal-section">
-            <h2>{t.scope}</h2>
-            <Paragraphs text={bid.scope} />
-          </section>
-        )}
-
-        <section className="proposal-section">
-          {withLines && <h2>{t.items}</h2>}
-          <table className="proposal-table">
-            {withLines && (
-              <thead>
-                <tr>
-                  <th scope="col">{t.item}</th>
-                  <th scope="col" className="num">{t.amount}</th>
-                </tr>
-              </thead>
-            )}
-            {withLines && (
-              <tbody>
-                {lines.map((l) => (
-                  <tr key={l.id}>
-                    <td>
-                      {l.description}
-                      {Number(l.quantity) !== 1 && (
-                        <span className="proposal-qty">
-                          {Number(l.quantity).toLocaleString(locale)} {l.unit ?? ""}
-                        </span>
-                      )}
-                    </td>
-                    <td className="num">{money(Number(l.price_amount))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            )}
-            <tfoot>
-              <tr>
-                <th scope="row">{t.total}</th>
-                <td className="num">{total === null ? "—" : money(total)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </section>
-
-        {settings?.proposal_terms && (
-          <section className="proposal-section proposal-terms">
-            <h2>{t.terms}</h2>
-            <Paragraphs text={settings.proposal_terms} />
-          </section>
-        )}
-
-        <section className="proposal-section proposal-sign">
-          <h2>{t.acceptance}</h2>
-          <p>{t.acceptanceText}</p>
-          <div className="proposal-sign-lines">
-            <div><span />{t.signature}</div>
-            <div><span />{t.name}</div>
-            <div><span />{t.signDate}</div>
-          </div>
-        </section>
-      </article>
+      <ProposalSheet content={content} lang={lang} />
     </div>
   );
 }

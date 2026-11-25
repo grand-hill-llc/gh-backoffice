@@ -48,7 +48,23 @@ export type ChangeOrderRow = {
   current_agreed: number | null;
 };
 
-export type Email = { key: string; kind: "digest" | "reminder" | "review" | "change"; to: string; subject: string; html: string; text: string };
+/** A client's answer to a proposal link (0013). */
+export type ProposalDecision = {
+  id: string;
+  bid_id: string;
+  bid_title: string;
+  client_name: string | null;
+  status: "accepted" | "rejected";
+  decided_at: string;
+  signer_name: string | null;
+  signer_email: string | null;
+  client_note: string | null;
+  total: number | null;
+  /** Staff profile who created the link. */
+  created_by: string | null;
+};
+
+export type Email = { key: string; kind: "digest" | "reminder" | "review" | "change" | "proposal"; to: string; subject: string; html: string; text: string };
 
 export type PlanInput = {
   profiles: Profile[];
@@ -58,6 +74,7 @@ export type PlanInput = {
   appUrl: string;
   settings: AlertSettings;
   changeOrders?: ChangeOrderRow[];
+  proposals?: ProposalDecision[];
   /** Ignores the morning window (dry runs and previews). */
   force?: boolean;
 };
@@ -152,6 +169,7 @@ export function reminderStage(daysLeft: number, days = DEFAULT_SETTINGS.expiryDa
 export function planEmails(input: PlanInput): Email[] {
   const { profiles, docs, leads, now, appUrl, settings, force } = input;
   const changeOrders = input.changeOrders ?? [];
+  const proposals = input.proposals ?? [];
   const { subsEnabled, digestEnabled, digestHour, digestMuted } = settings;
   const expiryDays = cleanDays(settings.expiryDays);
   const { today, weekday } = floridaClock(now);
@@ -174,6 +192,14 @@ export function planEmails(input: PlanInput): Email[] {
         emails.push(changeEmail(co, p, appUrl));
       }
     }
+  }
+
+  // A client accepted or rejected a proposal: tell whoever sent it and the super admins, right away.
+  const staffProfiles = profiles.filter((p) => p.role !== "subcontractor" && p.email);
+  for (const pr of proposals) {
+    if (now.getTime() - Date.parse(pr.decided_at) > REVIEW_LOOKBACK_MS) continue;
+    const to = staffProfiles.filter((p) => p.id === pr.created_by || p.role === "super_admin");
+    for (const p of to) emails.push(proposalEmail(pr, p, appUrl));
   }
 
   if (!force && !isMorningWindow(now, digestHour)) return emails;
@@ -325,6 +351,31 @@ function money(value: number, locale: "es-US" | "en-US"): string {
 
 function signed(value: number, locale: "es-US" | "en-US"): string {
   return `${value < 0 ? "−" : "+"}${money(Math.abs(value), locale)}`;
+}
+
+function proposalEmail(pr: ProposalDecision, p: Profile, appUrl: string): Email {
+  const accepted = pr.status === "accepted";
+  const who = pr.signer_name || "El cliente";
+  const amount = pr.total === null ? "" : ` por ${money(Number(pr.total), "es-US")}`;
+  const client = pr.client_name ? ` (${pr.client_name})` : "";
+  const title = accepted ? "Propuesta aceptada" : "Propuesta rechazada";
+  const lead = accepted
+    ? `${who} aceptó la propuesta de ${pr.bid_title}${client}${amount}. El bid pasó a Ganado.`
+    : `${who} rechazó la propuesta de ${pr.bid_title}${client}${amount}.`;
+  const details = [pr.signer_email ? `Correo: ${pr.signer_email}` : null, pr.client_note ? `Comentario: ${pr.client_note}` : null].filter(Boolean) as string[];
+  const href = `${appUrl}/bids/${pr.bid_id}`;
+  return {
+    key: `proposal:${pr.id}:${pr.decided_at}:${p.id}`,
+    kind: "proposal",
+    to: p.email as string,
+    subject: oneLine(`Grand Hill · ${title} · ${pr.bid_title}`),
+    html: layout(
+      title,
+      `<p style="font-size:15px;line-height:1.5">${esc(lead)}</p>${details.map((x) => `<p style="font-size:14px;line-height:1.5;color:#6b7078;margin:6px 0">${esc(x)}</p>`).join("")}`,
+      { href, label: accepted ? "Abrir el bid y crear el proyecto" : "Abrir el bid" },
+    ),
+    text: [lead, ...details, "", href].join("\n"),
+  };
 }
 
 function changeEmail(co: ChangeOrderRow, p: Profile, appUrl: string): Email {
