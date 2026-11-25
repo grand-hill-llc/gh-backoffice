@@ -60,15 +60,20 @@ export default function BidForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
+  /** With estimate lines, cost and price are calculated from them and not edited here. */
+  const [fromEstimate, setFromEstimate] = useState(false);
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const [c, b] = await Promise.all([
+      const [c, b, l] = await Promise.all([
         supabase.from("clients").select("id, name").order("name"),
         id ? supabase.from("bids").select(BID_COLUMNS).eq("id", id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+        // Missing estimates table (migration 0011 not applied) just leaves the fields editable.
+        id ? supabase.from("estimate_lines").select("id", { count: "exact", head: true }).eq("bid_id", id) : Promise.resolve({ count: 0, error: null }),
       ]);
       if (!active) return;
+      setFromEstimate(!l.error && (l.count ?? 0) > 0);
       setLoading(false);
       if (c.error || b.error || (id && !b.data)) return setLoadFailed(true);
       setClients((c.data ?? []) as { id: string; name: string }[]);
@@ -136,8 +141,7 @@ export default function BidForm() {
       due_date: values.due_date || null,
       location: blank(values.location),
       scope: blank(values.scope),
-      estimated_value: estimated,
-      our_price: price,
+      ...(fromEstimate ? {} : { estimated_value: estimated, our_price: price }),
       notes: blank(values.notes),
     };
     const result = editing
@@ -271,6 +275,14 @@ export default function BidForm() {
 
         <fieldset className="form-section">
           <legend className="gh-label">{t.sales.sectionMoney}</legend>
+          {fromEstimate ? (
+            <div className="estimate-locked">
+              <p>
+                {t.sales.ourPrice}: <strong>{formatMoney(price, t.locale)}</strong> · {t.sales.estimatedValue}: <strong>{formatMoney(estimated, t.locale)}</strong>
+              </p>
+              <p className="gh-help">{t.estimates.lockedHelp}</p>
+            </div>
+          ) : (
           <div className="form-grid">
             <MoneyField id="our_price" label={t.sales.ourPrice} help={t.sales.ourPriceHelp} value={values.our_price} error={priceError} onChange={(v) => set("our_price", v)} />
             <MoneyField
@@ -288,6 +300,7 @@ export default function BidForm() {
               </p>
             )}
           </div>
+          )}
         </fieldset>
 
         <fieldset className="form-section">

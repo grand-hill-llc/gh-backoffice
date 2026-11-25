@@ -13,15 +13,17 @@ type Settings = {
   digest_muted: string[];
   expiry_days: number[];
   subs_alerts_enabled: boolean;
+  default_markup_pct: number;
 };
 type Staff = { id: string; full_name: string | null; email: string | null; role: "super_admin" | "admin" };
 
-const COLUMNS = "website_lead_owner, digest_enabled, digest_hour, digest_muted, expiry_days, subs_alerts_enabled";
+const COLUMNS = "website_lead_owner, digest_enabled, digest_hour, digest_muted, expiry_days, subs_alerts_enabled, default_markup_pct";
 const HOURS = [6, 7, 8, 9, 10, 11];
 const DAY_OPTIONS = [60, 45, 30, 15, 7, 3, 1];
 
 const normalize = (s: Settings): Settings => ({
   ...s,
+  default_markup_pct: Number(s.default_markup_pct),
   digest_muted: [...s.digest_muted].sort(),
   expiry_days: [...s.expiry_days].sort((a, b) => b - a),
 });
@@ -88,6 +90,8 @@ export default function SettingsPage() {
   const who = (s: Staff) => s.full_name || s.email || "—";
   const ownerMissing = form.website_lead_owner !== null && !staff.some((s) => s.id === form.website_lead_owner);
   const daysError = form.expiry_days.length === 0 ? t.settings.daysRequired : null;
+  const markupOk = Number.isFinite(form.default_markup_pct) && form.default_markup_pct >= 0 && form.default_markup_pct <= 500;
+  const markupError = markupOk ? null : t.settings.markupInvalid;
   const dirty = !same(form, saved);
 
   const toggleDay = (d: number) =>
@@ -97,7 +101,7 @@ export default function SettingsPage() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (daysError || !dirty) return;
+    if (daysError || markupError || !dirty) return;
     setBusy(true);
     setFlash(null);
     const { data, error } = await supabase
@@ -195,6 +199,29 @@ export default function SettingsPage() {
           </fieldset>
         </Panel>
 
+        <Panel title={t.settings.estimatesTitle}>
+          <div className={`gh-field settings-narrow${markupError ? " is-error" : ""}`}>
+            <label className="gh-field-label" htmlFor="settings-markup">{t.settings.markup}</label>
+            <div className="pct-input">
+              <input
+                id="settings-markup"
+                className="gh-input"
+                inputMode="decimal"
+                value={Number.isNaN(form.default_markup_pct) ? "" : String(form.default_markup_pct)}
+                onChange={(e) => set("default_markup_pct", e.target.value.trim() === "" ? NaN : Number(e.target.value.replace(",", ".")))}
+                aria-invalid={!!markupError}
+                aria-describedby="settings-markup-help"
+              />
+              <span aria-hidden="true">%</span>
+            </div>
+            {markupError ? (
+              <p className="gh-error" id="settings-markup-help">{markupError}</p>
+            ) : (
+              <p className="gh-help" id="settings-markup-help">{t.settings.markupHelp}</p>
+            )}
+          </div>
+        </Panel>
+
         <Panel title={t.settings.subsTitle}>
           <label className="gh-check">
             <input type="checkbox" checked={form.subs_alerts_enabled} onChange={(e) => set("subs_alerts_enabled", e.target.checked)} />
@@ -211,7 +238,7 @@ export default function SettingsPage() {
         )}
 
         <div className="form-actions">
-          <button className="gh-btn gh-btn-primary" type="submit" disabled={busy || !dirty || !!daysError}>
+          <button className="gh-btn gh-btn-primary" type="submit" disabled={busy || !dirty || !!daysError || !!markupError}>
             {busy ? t.common.saving : t.common.save}
           </button>
           {dirty && !busy && (
