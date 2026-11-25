@@ -129,6 +129,7 @@ export default function BidDetail() {
                 <Link className="gh-btn gh-btn-primary gh-btn-sm" to={`/proyectos/nuevo?bid=${bid.id}`}>{t.projects.createFromBid}</Link>
               )
             )}
+            <Link className="gh-btn gh-btn-secondary gh-btn-sm" to={`/bids/${bid.id}/propuesta`}>{t.proposal.open}</Link>
             <Link className="gh-btn gh-btn-secondary gh-btn-sm" to={`/bids/${bid.id}/editar`}>{t.common.edit}</Link>
           </div>
         </div>

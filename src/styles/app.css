@@ -605,3 +605,65 @@
 .estimate-table .row-actions { white-space: nowrap; }
 /* Keeps screen-reader-only labels inside a scrolling table from widening the page. */
 .table-wrap { position: relative; }
+
+/* ---------- Client proposal (always light, like paper) ---------- */
+.proposal-status { padding: var(--space-4); }
+.proposal-page { min-height: 100vh; background: var(--surface-alt); color: var(--ink); padding: var(--space-4) var(--space-3) var(--space-6); }
+.proposal-toolbar { max-width: 816px; margin: 0 auto var(--space-3); display: grid; gap: var(--space-2); }
+.proposal-toolbar .back-link { margin: 0; }
+.proposal-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.proposal-controls .gh-btn { margin-left: auto; }
+.proposal-toolbar p { margin: 0; }
+
+.proposal-sheet {
+  --p-ink: #1f2329; --p-muted: #5f646c; --p-line: #dcdee2; --p-accent: #c8102e;
+  max-width: 816px; margin: 0 auto; background: #fff; color: var(--p-ink);
+  padding: 56px 60px; box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+  font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5;
+}
+.proposal-sheet p { margin: 0; }
+.proposal-head { display: flex; justify-content: space-between; gap: 32px; padding-bottom: 24px; border-bottom: 2px solid var(--p-ink); }
+.proposal-logo { display: block; height: 40px; width: auto; margin-bottom: 10px; }
+.proposal-company { color: var(--p-muted); font-size: 12px; }
+.proposal-meta { text-align: right; }
+.proposal-kicker { font-size: 24px; font-weight: 500; letter-spacing: .02em; margin-bottom: 8px !important; }
+.proposal-meta dl { margin: 0; display: grid; gap: 2px; }
+.proposal-meta dl div { display: flex; justify-content: flex-end; gap: 10px; }
+.proposal-meta dt { color: var(--p-muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.proposal-meta dd { margin: 0; font-variant-numeric: tabular-nums; }
+.proposal-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; padding: 24px 0; border-bottom: 1px solid var(--p-line); }
+.proposal-label { color: var(--p-accent); font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 6px !important; }
+.proposal-strong { font-size: 16px; font-weight: 600; }
+.proposal-section { padding-top: 24px; display: grid; gap: 8px; }
+.proposal-section h2 { margin: 0 0 4px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--p-accent); }
+.proposal-table { width: 100%; border-collapse: collapse; }
+.proposal-table th, .proposal-table td { padding: 10px 0; border-bottom: 1px solid var(--p-line); text-align: left; vertical-align: top; }
+.proposal-table thead th { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--p-muted); font-weight: 600; }
+.proposal-table .num { text-align: right; padding-left: 24px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.proposal-qty { display: block; color: var(--p-muted); font-size: 12px; }
+.proposal-table tfoot th, .proposal-table tfoot td { border-bottom: 0; border-top: 2px solid var(--p-ink); font-size: 18px; font-weight: 600; padding-top: 12px; }
+.proposal-terms p { color: var(--p-ink); }
+.proposal-sign-lines { display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 24px; margin-top: 40px; }
+.proposal-sign-lines div { font-size: 11px; color: var(--p-muted); text-transform: uppercase; letter-spacing: .08em; }
+.proposal-sign-lines span { display: block; border-bottom: 1px solid var(--p-ink); height: 36px; margin-bottom: 6px; }
+
+@media (max-width: 640px) {
+  .proposal-page { padding: var(--space-2) var(--space-2) var(--space-4); }
+  .proposal-sheet { padding: 28px 20px; }
+  .proposal-head { flex-direction: column; gap: 16px; }
+  .proposal-meta { text-align: left; }
+  .proposal-meta dl div { justify-content: flex-start; }
+  .proposal-parties { grid-template-columns: 1fr; gap: 16px; }
+  .proposal-sign-lines { grid-template-columns: 1fr; gap: 12px; }
+  .proposal-controls .gh-btn { margin-left: 0; }
+}
+
+@media print {
+  @page { size: letter; margin: 14mm; }
+  html, body { background: #fff !important; }
+  .proposal-toolbar { display: none !important; }
+  .proposal-page { padding: 0; background: #fff; min-height: 0; }
+  .proposal-sheet { box-shadow: none; padding: 0; max-width: none; }
+  .proposal-table tr, .proposal-sign { break-inside: avoid; }
+}
+.proposal-controls .segmented button { width: auto; flex: none; white-space: nowrap; padding-left: 12px; padding-right: 12px; }

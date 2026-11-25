@@ -42,7 +42,8 @@ npm run dev
    Luego `supabase/migrations/0008_change_orders.sql` (órdenes de cambio de los proyectos y su detalle en el portal). Aplícala **antes** de desplegar la versión de la app que la usa.
    Luego `supabase/migrations/0009_change_order_decisions.sql` (quién aprobó o rechazó cada orden). Aplícala **antes** de desplegar la app y la función `email-alerts` que la usan.
    Luego `supabase/migrations/0010_record_links.sql` (enlaces a archivos de bids y proyectos en Google Drive; no usa Storage). Aplícala **antes** de desplegar la versión de la app que la usa.
-   Por último `supabase/migrations/0011_estimates.sql` (cotizaciones de subcontratistas y partidas del estimado de cada bid). Aplícala **antes** de desplegar la versión de la app que la usa.
+   Luego `supabase/migrations/0011_estimates.sql` (cotizaciones de subcontratistas y partidas del estimado de cada bid). Aplícala **antes** de desplegar la versión de la app que la usa.
+   Por último `supabase/migrations/0012_proposal_settings.sql` (datos de la empresa, condiciones y vigencia de la propuesta al cliente). Aplícala **antes** de desplegar la versión de la app que la usa.
 2. Despliega la función de gestión de usuarios (ver abajo). Desde ese momento, un super admin invita, cambia roles y quita accesos en **Equipo** (`/equipo`), sin entrar a Supabase.
 
 | Rol | Acceso |
@@ -160,6 +161,7 @@ Secretos opcionales: `ALERTS_FROM` (remitente, por defecto `Grand Hill <alerts@u
 
 - `/login` inicio de sesión y recuperación de contraseña
 - `/restablecer` destino del enlace del correo de recuperación
+- `/bids/:id/propuesta` propuesta al cliente, lista para imprimir o guardar como PDF (solo equipo)
 - `/` redirige según el rol
 - `/dashboard`, `/leads`, `/bids`, `/clientes`, `/subcontratistas`, `/proyectos` personal interno (super admin y admin), cada uno con `/nuevo`, `/:id` y `/:id/editar`
 - `/proyectos/nuevo?bid=<id>` crea un proyecto copiando los datos de un bid ganado

@@ -14,16 +14,34 @@ type Settings = {
   expiry_days: number[];
   subs_alerts_enabled: boolean;
   default_markup_pct: number;
+  proposal_show_lines: boolean;
+  proposal_validity_days: number;
+  proposal_terms: string | null;
+  company_address: string | null;
+  company_phone: string | null;
+  company_email: string | null;
+  company_license: string | null;
 };
+type TextKey = "proposal_terms" | "company_address" | "company_phone" | "company_email" | "company_license";
 type Staff = { id: string; full_name: string | null; email: string | null; role: "super_admin" | "admin" };
 
-const COLUMNS = "website_lead_owner, digest_enabled, digest_hour, digest_muted, expiry_days, subs_alerts_enabled, default_markup_pct";
+const COLUMNS =
+  "website_lead_owner, digest_enabled, digest_hour, digest_muted, expiry_days, subs_alerts_enabled, default_markup_pct, " +
+  "proposal_show_lines, proposal_validity_days, proposal_terms, company_address, company_phone, company_email, company_license";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const blank = (v: string | null) => (v && v.trim() ? v.trim() : null);
 const HOURS = [6, 7, 8, 9, 10, 11];
 const DAY_OPTIONS = [60, 45, 30, 15, 7, 3, 1];
 
 const normalize = (s: Settings): Settings => ({
   ...s,
   default_markup_pct: Number(s.default_markup_pct),
+  proposal_validity_days: Number(s.proposal_validity_days),
+  proposal_terms: blank(s.proposal_terms),
+  company_address: blank(s.company_address),
+  company_phone: blank(s.company_phone),
+  company_email: blank(s.company_email),
+  company_license: blank(s.company_license),
   digest_muted: [...s.digest_muted].sort(),
   expiry_days: [...s.expiry_days].sort((a, b) => b - a),
 });
@@ -47,7 +65,7 @@ export default function SettingsPage() {
       setFailed(true);
       return;
     }
-    const settings = normalize(s.data as Settings);
+    const settings = normalize(s.data as unknown as Settings);
     setSaved(settings);
     setForm(settings);
     const name = (x: Staff) => (x.full_name || x.email || "").toLowerCase();
@@ -92,7 +110,12 @@ export default function SettingsPage() {
   const daysError = form.expiry_days.length === 0 ? t.settings.daysRequired : null;
   const markupOk = Number.isFinite(form.default_markup_pct) && form.default_markup_pct >= 0 && form.default_markup_pct <= 500;
   const markupError = markupOk ? null : t.settings.markupInvalid;
+  const validityOk = Number.isInteger(form.proposal_validity_days) && form.proposal_validity_days >= 1 && form.proposal_validity_days <= 365;
+  const validityError = validityOk ? null : t.settings.validityInvalid;
+  const emailError = form.company_email && form.company_email.trim() && !EMAIL_RE.test(form.company_email.trim()) ? t.settings.emailInvalid : null;
+  const anyError = !!(daysError || markupError || validityError || emailError);
   const dirty = !same(form, saved);
+  const text = (key: TextKey) => form[key] ?? "";
 
   const toggleDay = (d: number) =>
     set("expiry_days", form.expiry_days.includes(d) ? form.expiry_days.filter((x) => x !== d) : [...form.expiry_days, d]);
@@ -101,7 +124,7 @@ export default function SettingsPage() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (daysError || markupError || !dirty) return;
+    if (anyError || !dirty) return;
     setBusy(true);
     setFlash(null);
     const { data, error } = await supabase
@@ -115,7 +138,7 @@ export default function SettingsPage() {
       setFlash({ ok: false, text: t.settings.saveFailed });
       return;
     }
-    const next = normalize(data as Settings);
+    const next = normalize(data as unknown as Settings);
     setSaved(next);
     setForm(next);
     setFlash({ ok: true, text: t.settings.saved });
@@ -222,6 +245,72 @@ export default function SettingsPage() {
           </div>
         </Panel>
 
+        <Panel title={t.settings.proposalTitle}>
+          <label className="gh-check">
+            <input type="checkbox" checked={form.proposal_show_lines} onChange={(e) => set("proposal_show_lines", e.target.checked)} />
+            {t.settings.showLines}
+          </label>
+          <p className="gh-help">{t.settings.showLinesHelp}</p>
+          <div className={`gh-field settings-narrow${validityError ? " is-error" : ""}`}>
+            <label className="gh-field-label" htmlFor="settings-validity">{t.settings.validity}</label>
+            <input
+              id="settings-validity"
+              className="gh-input"
+              inputMode="numeric"
+              value={Number.isNaN(form.proposal_validity_days) ? "" : String(form.proposal_validity_days)}
+              onChange={(e) => set("proposal_validity_days", e.target.value.trim() === "" ? NaN : Number(e.target.value))}
+              aria-invalid={!!validityError}
+              aria-describedby="settings-validity-help"
+            />
+            {validityError ? (
+              <p className="gh-error" id="settings-validity-help">{validityError}</p>
+            ) : (
+              <p className="gh-help" id="settings-validity-help">{t.settings.validityHelp}</p>
+            )}
+          </div>
+          <div className="form-grid">
+            <div className="gh-field span-2">
+              <label className="gh-field-label" htmlFor="settings-address">{t.settings.companyAddress}</label>
+              <input id="settings-address" className="gh-input" maxLength={300} value={text("company_address")} onChange={(e) => set("company_address", e.target.value)} />
+            </div>
+            <div className="gh-field">
+              <label className="gh-field-label" htmlFor="settings-phone">{t.settings.companyPhone}</label>
+              <input id="settings-phone" className="gh-input" type="tel" maxLength={50} value={text("company_phone")} onChange={(e) => set("company_phone", e.target.value)} />
+            </div>
+            <div className={`gh-field${emailError ? " is-error" : ""}`}>
+              <label className="gh-field-label" htmlFor="settings-email">{t.settings.companyEmail}</label>
+              <input
+                id="settings-email"
+                className="gh-input"
+                type="email"
+                maxLength={320}
+                value={text("company_email")}
+                onChange={(e) => set("company_email", e.target.value)}
+                aria-invalid={!!emailError}
+              />
+              {emailError && <p className="gh-error">{emailError}</p>}
+            </div>
+            <div className="gh-field">
+              <label className="gh-field-label" htmlFor="settings-license">{t.settings.companyLicense}</label>
+              <input id="settings-license" className="gh-input" maxLength={100} value={text("company_license")} onChange={(e) => set("company_license", e.target.value)} />
+            </div>
+            <div className="gh-field span-2">
+              <label className="gh-field-label" htmlFor="settings-terms">{t.settings.terms}</label>
+              <textarea
+                id="settings-terms"
+                className="gh-input"
+                rows={6}
+                maxLength={5000}
+                placeholder={t.settings.termsPlaceholder}
+                value={text("proposal_terms")}
+                onChange={(e) => set("proposal_terms", e.target.value)}
+                aria-describedby="settings-terms-help"
+              />
+              <p className="gh-help" id="settings-terms-help">{t.settings.termsHelp}</p>
+            </div>
+          </div>
+        </Panel>
+
         <Panel title={t.settings.subsTitle}>
           <label className="gh-check">
             <input type="checkbox" checked={form.subs_alerts_enabled} onChange={(e) => set("subs_alerts_enabled", e.target.checked)} />
@@ -238,7 +327,7 @@ export default function SettingsPage() {
         )}
 
         <div className="form-actions">
-          <button className="gh-btn gh-btn-primary" type="submit" disabled={busy || !dirty || !!daysError || !!markupError}>
+          <button className="gh-btn gh-btn-primary" type="submit" disabled={busy || !dirty || anyError}>
             {busy ? t.common.saving : t.common.save}
           </button>
           {dirty && !busy && (

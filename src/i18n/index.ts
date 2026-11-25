@@ -23,3 +23,8 @@ export function normalizeTrade(value: string): string {
 }
 
 export type { Dict };
+
+/** A dictionary in a given language, for content that doesn't follow the app's language (the client proposal). */
+export function dictFor(lang: Lang): Dict {
+  return DICTS[lang];
+}
