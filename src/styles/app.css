@@ -405,9 +405,7 @@
 .meta-link { font-size: 14px; color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 4px; }
 
 /* Bid detail: quick status change */
-.status-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-2); margin-bottom: var(--space-3); }
-.status-segmented { flex: 0 1 auto; background: var(--surface-raised); overflow-x: auto; }
-.status-segmented button { flex: 0 0 auto; height: 36px; padding: 0 14px; }
+.status-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-2); margin-bottom: var(--space-4); padding-bottom: var(--space-4); border-bottom: var(--stroke-hairline) solid var(--line); }
 .status-bar .gh-ok, .status-bar .gh-error { margin: 0; }
 
 .money-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin-bottom: var(--space-3); }
@@ -424,7 +422,6 @@
 @media (max-width: 720px) {
   .toolbar .toolbar-wide { flex: 1 1 100%; }
   .money-grid { grid-template-columns: 1fr; }
-  .status-segmented { width: 100%; }
 }
 
 /* Margin */
@@ -605,3 +602,171 @@
 .estimate-table .row-actions { white-space: nowrap; }
 /* Keeps screen-reader-only labels inside a scrolling table from widening the page. */
 .table-wrap { position: relative; }
+
+/* ---------- Client proposal (always light, like paper) ---------- */
+.proposal-status { padding: var(--space-4); }
+.proposal-page { min-height: 100vh; background: var(--surface-alt); color: var(--ink); padding: var(--space-4) var(--space-3) var(--space-6); }
+.proposal-toolbar { max-width: 816px; margin: 0 auto var(--space-3); display: grid; gap: var(--space-2); }
+.proposal-toolbar .back-link { margin: 0; }
+.proposal-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.proposal-controls .gh-btn { margin-left: auto; }
+.proposal-toolbar p { margin: 0; }
+
+.proposal-sheet {
+  --p-ink: #1f2329; --p-muted: #5f646c; --p-line: #dcdee2; --p-accent: #c8102e;
+  max-width: 816px; margin: 0 auto; background: #fff; color: var(--p-ink);
+  padding: 56px 60px; box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+  font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5;
+}
+.proposal-sheet p { margin: 0; }
+.proposal-head { display: flex; justify-content: space-between; gap: 32px; padding-bottom: 24px; border-bottom: 2px solid var(--p-ink); }
+.proposal-logo { display: block; height: 40px; width: auto; margin-bottom: 10px; }
+.proposal-company { color: var(--p-muted); font-size: 12px; }
+.proposal-meta { text-align: right; }
+.proposal-kicker { font-size: 24px; font-weight: 500; letter-spacing: .02em; margin-bottom: 8px !important; }
+.proposal-meta dl { margin: 0; display: grid; gap: 2px; }
+.proposal-meta dl div { display: flex; justify-content: flex-end; gap: 10px; }
+.proposal-meta dt { color: var(--p-muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.proposal-meta dd { margin: 0; font-variant-numeric: tabular-nums; }
+.proposal-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; padding: 24px 0; border-bottom: 1px solid var(--p-line); }
+.proposal-label { color: var(--p-accent); font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 6px !important; }
+.proposal-strong { font-size: 16px; font-weight: 600; }
+.proposal-section { padding-top: 24px; display: grid; gap: 8px; }
+.proposal-section h2 { margin: 0 0 4px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--p-accent); }
+.proposal-table { width: 100%; border-collapse: collapse; }
+.proposal-table th, .proposal-table td { padding: 10px 0; border-bottom: 1px solid var(--p-line); text-align: left; vertical-align: top; }
+.proposal-table thead th { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--p-muted); font-weight: 600; }
+.proposal-table .num { text-align: right; padding-left: 24px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.proposal-qty { display: block; color: var(--p-muted); font-size: 12px; }
+.proposal-table tfoot th, .proposal-table tfoot td { border-bottom: 0; border-top: 2px solid var(--p-ink); font-size: 18px; font-weight: 600; padding-top: 12px; }
+.proposal-terms p { color: var(--p-ink); }
+.proposal-sign-lines { display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 24px; margin-top: 40px; }
+.proposal-sign-lines div { font-size: 11px; color: var(--p-muted); text-transform: uppercase; letter-spacing: .08em; }
+.proposal-sign-lines span { display: block; border-bottom: 1px solid var(--p-ink); height: 36px; margin-bottom: 6px; }
+
+@media (max-width: 640px) {
+  .proposal-page { padding: var(--space-2) var(--space-2) var(--space-4); }
+  .proposal-sheet { padding: 28px 20px; }
+  .proposal-head { flex-direction: column; gap: 16px; }
+  .proposal-meta { text-align: left; }
+  .proposal-meta dl div { justify-content: flex-start; }
+  .proposal-parties { grid-template-columns: 1fr; gap: 16px; }
+  .proposal-sign-lines { grid-template-columns: 1fr; gap: 12px; }
+  .proposal-controls .gh-btn { margin-left: 0; }
+}
+
+@media print {
+  @page { size: letter; margin: 14mm; }
+  html, body { background: #fff !important; }
+  .proposal-toolbar { display: none !important; }
+  .proposal-page { padding: 0; background: #fff; min-height: 0; }
+  .proposal-sheet { box-shadow: none; padding: 0; max-width: none; }
+  .proposal-table tr, .proposal-sign { break-inside: avoid; }
+}
+.proposal-controls .segmented button { width: auto; flex: none; white-space: nowrap; padding-left: 12px; padding-right: 12px; }
+
+/* The sheet is paper: light tokens inside it whatever the app theme (also for the acceptance form). */
+.proposal-sheet {
+  color-scheme: light;
+  --surface: #ffffff; --surface-alt: #f2f2f0; --surface-raised: #ffffff;
+  --ink: #262b33; --ink-muted: #60666e; --line: #e4e5e7; --line-strong: #6e747c;
+  --accent: #c40d3c; --accent-hover: #a30a31; --accent-text: #c40d3c; --on-accent: #ffffff;
+  --focus: #262b33; --danger: #c40d3c; --success: #1e7a4f; --warning: #8a5a00;
+}
+.proposal-decide { display: grid; gap: var(--space-2); }
+.proposal-decide-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-2); }
+.proposal-actions { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-left: auto; }
+.proposal-controls .proposal-actions .gh-btn { margin-left: 0; }
+.proposal-link-box > div { display: grid; gap: var(--space-1); min-width: 0; flex: 1; }
+.proposal-link-row { display: flex; gap: var(--space-1); }
+.proposal-link-row .gh-input { flex: 1; min-width: 0; font-size: 13px; }
+@media (max-width: 640px) {
+  .proposal-decide-grid { grid-template-columns: 1fr; }
+  .proposal-actions { margin-left: 0; }
+}
+@media print {
+  .proposal-decide { display: none; }
+}
+
+/* ---------- Detail header refinements ---------- */
+.detail-title-row .gh-h2 { font-size: 36px; line-height: 1.12; }
+.detail-meta { margin-top: 6px; }
+.meta-client { display: inline-flex; align-items: center; gap: 8px; }
+.meta-client .icon { width: 16px; height: 16px; flex: none; stroke: var(--ink-muted); stroke-width: 1.5; fill: none; }
+@media (max-width: 760px) { .detail-title-row .gh-h2 { font-size: 28px; } }
+
+/* Panel headers wrap their action under the title when space runs out (long titles on phones). */
+.panel-head { flex-wrap: wrap; row-gap: var(--space-1); }
+.panel-head .gh-btn { max-width: 100%; }
+
+
+/* ---------- Status timeline ----------
+   Full width: first dot on the page's left edge, endings on its right edge.
+   Each step is a dot + label (left-aligned) and owns the segment to the next dot. */
+.status-timeline { display: grid; gap: var(--space-1); margin: 0 0 var(--space-4); padding-bottom: var(--space-3); border-bottom: var(--stroke-hairline) solid var(--line); }
+.status-timeline .gh-ok, .status-timeline .gh-error { margin: 0; }
+.track-row { display: flex; align-items: flex-start; gap: var(--space-4); }
+.status-track { --dot: 22px; flex: 1; min-width: 0; margin: 0; padding: 0; list-style: none; display: flex; }
+.track-step { position: relative; flex: 1 1 0; min-width: 0; }
+.track-step:last-child { flex: 0 0 auto; }
+/* Segment from this dot to the next one. */
+.track-step:not(:last-child)::after {
+  content: ""; position: absolute; top: calc(var(--dot) / 2 - 1px); left: var(--dot); right: 0; height: 2px;
+  background: color-mix(in srgb, var(--line-strong) 35%, transparent);
+}
+.track-step.is-done::after { background: var(--ink); }
+.status-timeline.is-success .track-step.is-done::after { background: var(--success); }
+.track-step button {
+  position: relative; z-index: 1; display: grid; justify-items: start; gap: 8px; padding: 0 12px 0 0;
+  border: 0; background: transparent; color: var(--ink-muted); cursor: pointer; text-align: left;
+}
+.track-step button:disabled { cursor: progress; }
+.track-step button:focus-visible { outline: none; }
+.track-step button:focus-visible .track-dot { outline: var(--stroke-rule) solid var(--focus); outline-offset: 3px; }
+.track-dot {
+  display: grid; place-items: center; width: var(--dot); height: var(--dot); border-radius: 50%;
+  border: 2px solid var(--line-strong); background: var(--surface-alt); color: var(--surface);
+  transition: background-color .15s ease, border-color .15s ease;
+}
+.track-dot .icon { width: 12px; height: 12px; stroke: currentColor; stroke-width: 2.5; fill: none; }
+.track-label { font: 600 11px/1.25 var(--font-sans); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.track-step button:hover, .track-step button:hover .track-label { color: var(--ink); }
+.track-step button:hover .track-dot { border-color: var(--ink); }
+.track-step.is-done .track-dot { background: var(--ink); border-color: var(--ink); }
+.track-step.is-done button { color: var(--ink); }
+.track-step.is-current button { color: var(--ink); }
+.track-step.is-current .track-dot { background: var(--surface-raised); border-color: var(--ink); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink) 12%, transparent); }
+.track-step.is-current .track-dot::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); }
+.status-timeline.is-success .track-step.is-done .track-dot { background: var(--success); border-color: var(--success); }
+.status-timeline.is-success .track-step.is-current .track-dot { background: var(--success); border-color: var(--success); box-shadow: 0 0 0 4px color-mix(in srgb, var(--success) 18%, transparent); }
+.status-timeline.is-success .track-step.is-current .track-dot::after { display: none; }
+.status-timeline.is-success .track-step.is-current button { color: var(--success); }
+.status-timeline.is-ended .status-track { opacity: .5; }
+
+.track-endings { display: flex; flex: none; gap: 6px; }
+.track-ending {
+  height: 22px; padding: 0 10px; border: var(--stroke-hairline) dashed var(--line-strong); border-radius: 11px; background: transparent;
+  color: var(--ink-muted); cursor: pointer; font: 600 10px/1 var(--font-sans); letter-spacing: .06em; text-transform: uppercase;
+}
+.track-ending:hover { color: var(--ink); border-color: var(--ink); }
+.track-ending:focus-visible { outline: var(--stroke-rule) solid var(--focus); outline-offset: 2px; }
+.track-ending.is-current { border-style: solid; border-color: var(--ink-muted); background: var(--ink-muted); color: var(--surface); }
+
+@media (max-width: 760px) {
+  .track-row { flex-direction: column; gap: var(--space-2); }
+  .status-track { width: 100%; }
+  .track-label { font-size: 10px; letter-spacing: .03em; white-space: normal; }
+  .track-step button { padding-right: 6px; }
+}
+
+/* Panel headers wrap their action under the title when space runs out (long titles on phones). */
+.panel-head { flex-wrap: wrap; row-gap: var(--space-1); }
+.panel-head .gh-btn { max-width: 100%; }
+
+
+/* Header rhythm: title + client read as one block; one constant gap before the timeline. */
+.detail-header { margin-bottom: var(--space-3); }
+.detail-title-row { align-items: center; }
+.detail-actions { margin-top: 0; }
+@media (max-width: 760px) { .detail-title-row { align-items: flex-start; } }
+.estimate-table tfoot th, .estimate-table tfoot td { border-bottom: 0; }

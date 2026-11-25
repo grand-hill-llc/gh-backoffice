@@ -42,7 +42,9 @@ npm run dev
    Luego `supabase/migrations/0008_change_orders.sql` (órdenes de cambio de los proyectos y su detalle en el portal). Aplícala **antes** de desplegar la versión de la app que la usa.
    Luego `supabase/migrations/0009_change_order_decisions.sql` (quién aprobó o rechazó cada orden). Aplícala **antes** de desplegar la app y la función `email-alerts` que la usan.
    Luego `supabase/migrations/0010_record_links.sql` (enlaces a archivos de bids y proyectos en Google Drive; no usa Storage). Aplícala **antes** de desplegar la versión de la app que la usa.
-   Por último `supabase/migrations/0011_estimates.sql` (cotizaciones de subcontratistas y partidas del estimado de cada bid). Aplícala **antes** de desplegar la versión de la app que la usa.
+   Luego `supabase/migrations/0011_estimates.sql` (cotizaciones de subcontratistas y conceptos del estimado de cada bid). Aplícala **antes** de desplegar la versión de la app que la usa.
+   Luego `supabase/migrations/0012_proposal_settings.sql` (datos de la empresa, condiciones y vigencia de la propuesta al cliente). Aplícala **antes** de desplegar la versión de la app que la usa.
+   Por último `supabase/migrations/0013_proposal_links.sql` (enlace para que el cliente acepte o rechace la propuesta en línea). Aplícala **antes** de desplegar la app, y vuelve a desplegar `email-alerts` para avisar al equipo de cada respuesta.
 2. Despliega la función de gestión de usuarios (ver abajo). Desde ese momento, un super admin invita, cambia roles y quita accesos en **Equipo** (`/equipo`), sin entrar a Supabase.
 
 | Rol | Acceso |
@@ -113,6 +115,7 @@ Para que los leads de la web vayan a otra persona, cámbiala en **Configuración
 | Subcontratista con login | Su COI o licencia en cada fecha de aviso y al vencer | Días laborables por la mañana |
 | Subcontratista con login | Documento aprobado o rechazado, con el motivo | Hasta 15 minutos después de la revisión |
 | Subcontratista con login | Orden de cambio aprobada que cambia su monto acordado, con el nuevo total | Hasta 15 minutos después de aprobarla |
+| Quien creó el enlace y los super admins | Un cliente aceptó o rechazó una propuesta, con su nombre, correo y comentario | Hasta 15 minutos después de la respuesta |
 
 Los subcontratistas sin login no reciben correos. La hora del resumen, quién lo recibe, los días de aviso y los correos a subcontratistas se cambian en **Configuración** (por defecto: 8:00 a. m., todo el equipo, 30, 15 y 7 días, avisos a subcontratistas encendidos).
 
@@ -160,6 +163,8 @@ Secretos opcionales: `ALERTS_FROM` (remitente, por defecto `Grand Hill <alerts@u
 
 - `/login` inicio de sesión y recuperación de contraseña
 - `/restablecer` destino del enlace del correo de recuperación
+- `/bids/:id/propuesta` propuesta al cliente, lista para imprimir o guardar como PDF, y creación del enlace para el cliente (solo equipo)
+- `/p/:token` propuesta que abre el cliente para aceptarla o rechazarla, sin cuenta (pública; el token es la llave)
 - `/` redirige según el rol
 - `/dashboard`, `/leads`, `/bids`, `/clientes`, `/subcontratistas`, `/proyectos` personal interno (super admin y admin), cada uno con `/nuevo`, `/:id` y `/:id/editar`
 - `/proyectos/nuevo?bid=<id>` crea un proyecto copiando los datos de un bid ganado

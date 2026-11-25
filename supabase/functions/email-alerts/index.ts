@@ -5,6 +5,7 @@
 //   expiry reminders  COI and license on each reminder date and once expired, to portal logins
 //   review results    approved or rejected documents, to portal logins
 //   change approvals  an approved change order that changes a sub's agreed amount, to portal logins
+//   proposal answers  a client accepted or rejected a proposal link, to its sender and the super admins
 // Hour, recipients, reminder days and on/off switches come from public.app_settings (Configuración).
 //
 // pg_cron has no user session, so this is deployed with --no-verify-jwt and only accepts
@@ -23,6 +24,7 @@ import {
   planEmails,
   type AlertSettings,
   type ChangeOrderRow,
+  type ProposalDecision,
   type Doc,
   type Email,
   type Lead,
@@ -85,7 +87,7 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const [profiles, docs, leads, stored, orders, assignments] = await Promise.all([
+  const [profiles, docs, leads, stored, orders, assignments, decisions] = await Promise.all([
     admin.from("profiles").select("id, email, full_name, role, subcontractor_id"),
     admin
       .from("subcontractor_documents")
@@ -103,6 +105,11 @@ Deno.serve(async (req) => {
       .from("change_orders")
       .select("id, project_id, number, title, status, contract_delta, sub_delta, project_sub_id, requested_on, decided_at, project:projects(name)"),
     admin.from("project_subs").select("id, subcontractor_id, agreed_amount"),
+    admin
+      .from("proposal_links")
+      .select("id, bid_id, status, decided_at, signer_name, signer_email, client_note, total, created_by, bid:bids(title, client:clients(name))")
+      .in("status", ["accepted", "rejected"])
+      .gte("decided_at", new Date(Date.now() - 3 * 86_400_000).toISOString()),
   ]);
   if (profiles.error || docs.error || leads.error) {
     console.error("load_failed", profiles.error?.message, docs.error?.message, leads.error?.message);
@@ -142,6 +149,13 @@ Deno.serve(async (req) => {
     };
   });
 
+  // Proposal answers (0013). Without them the other alerts still go out.
+  if (decisions.error) console.error("proposal_links_unavailable", decisions.error.message);
+  type DecisionRow = Omit<ProposalDecision, "bid_title" | "client_name"> & { bid: { title: string; client: { name: string } | null } | null };
+  const proposals: ProposalDecision[] = decisions.error
+    ? []
+    : (decisions.data as unknown as DecisionRow[]).map(({ bid, ...d }) => ({ ...d, bid_title: bid?.title ?? "—", client_name: bid?.client?.name ?? null }));
+
   // Configuración in the app. Before migration 0007 there is no table: today's defaults and the old secret.
   const s = stored.error ? null : stored.data;
   const settings: AlertSettings = s
@@ -164,6 +178,7 @@ Deno.serve(async (req) => {
     appUrl: (Deno.env.get("APP_URL") ?? "https://app.grandhillcorp.com").replace(/\/+$/, ""),
     settings,
     changeOrders,
+    proposals,
     force: dryRun || Boolean(previewTo),
   });
 
@@ -173,7 +188,7 @@ Deno.serve(async (req) => {
   if (dryRun) return json({ dry_run: true, due: counts(emails) });
 
   if (previewTo) {
-    const samples = ["digest", "reminder", "review", "change"].flatMap((kind) => emails.find((e) => e.kind === kind) ?? []);
+    const samples = ["digest", "reminder", "review", "change", "proposal"].flatMap((kind) => emails.find((e) => e.kind === kind) ?? []);
     const results = [];
     for (const e of samples) {
       const r = await sendResend({ ...e, to: previewTo, subject: `[PRUEBA] ${e.subject}` });

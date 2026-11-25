@@ -24,6 +24,8 @@ import SubcontractorDetail from "./pages/subcontractors/SubcontractorDetail";
 import SubcontractorForm from "./pages/subcontractors/SubcontractorForm";
 import SubcontractorList from "./pages/subcontractors/SubcontractorList";
 import SettingsPage from "./pages/Settings";
+import BidProposal from "./pages/bids/BidProposal";
+import PublicProposal from "./pages/PublicProposal";
 import Team from "./pages/Team";
 
 function Home() {
@@ -38,8 +40,15 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/restablecer" element={<ResetPassword />} />
+          {/* Client proposal link: public, the token is the key. */}
+          <Route path="/p/:token" element={<PublicProposal />} />
 
           <Route element={<RequireAuth />}>
+            {/* Printable proposal: staff only, without the app's sidebar. */}
+            <Route element={<RequireRole allow={STAFF} />}>
+              <Route path="/bids/:id/propuesta" element={<BidProposal />} />
+            </Route>
+
             <Route element={<AppLayout />}>
               <Route index element={<Home />} />
 
