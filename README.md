@@ -57,7 +57,8 @@ GitHub las corre solas (junto con la revisión de tipos) en cada PR a `main`: al
    Luego `supabase/migrations/0012_proposal_settings.sql` (datos de la empresa, condiciones y vigencia de la propuesta al cliente). Aplícala **antes** de desplegar la versión de la app que la usa.
    Luego `supabase/migrations/0013_proposal_links.sql` (enlace para que el cliente acepte o rechace la propuesta en línea). Aplícala **antes** de desplegar la app, y vuelve a desplegar `email-alerts` para avisar al equipo de cada respuesta.
    Luego `supabase/migrations/0014_proposal_emails.sql` (registro de las propuestas enviadas por correo desde la app). Aplícala **antes** de desplegar la app y despliega la función `send-proposal` (ver "Envío de propuestas por correo").
-   Por último `supabase/migrations/0015_staff_language.sql` (idioma de los avisos al equipo: resumen diario, respuestas a propuestas y nota de las solicitudes del sitio web). Aplícala **antes** de desplegar la app y vuelve a desplegar `email-alerts` y `website-lead`.
+   Luego `supabase/migrations/0015_staff_language.sql` (idioma de los avisos al equipo: resumen diario, respuestas a propuestas y nota de las solicitudes del sitio web). Aplícala **antes** de desplegar la app y vuelve a desplegar `email-alerts` y `website-lead`.
+   Por último `supabase/migrations/0016_social_posts.sql` (planificador de contenido para redes: publicaciones, sus imágenes y videos en el bucket privado `social-media`, y el ajuste de aprobación). Aplícala **antes** de desplegar la app.
 2. Despliega la función de gestión de usuarios (ver abajo). Desde ese momento, un super admin invita, cambia roles y quita accesos en **Equipo** (`/equipo`), sin entrar a Supabase.
 
 | Rol | Acceso |
@@ -194,5 +195,6 @@ Secretos opcionales: `PROPOSALS_FROM` (remitente), `PROPOSALS_REPLY_TO` y `APP_U
 - `/dashboard`, `/leads`, `/bids`, `/clientes`, `/subcontratistas`, `/proyectos` personal interno (super admin y admin), cada uno con `/nuevo`, `/:id` y `/:id/editar`
 - `/proyectos/nuevo?bid=<id>` crea un proyecto copiando los datos de un bid ganado
 - `/exportar` CSV para contabilidad (super admin y admin): movimientos, proyectos, órdenes de cambio y subcontratistas, en formato Excel o, para movimientos y subcontratistas, listo para importar en QuickBooks
+- `/contenido` planificador de redes (super admin y admin): calendario mensual en hora de Florida, ideas sin fecha y publicaciones por aprobar; `/contenido/nuevo` y `/contenido/:id` para crear, programar, aprobar o devolver y marcar como publicada. Si en **Configuración** se activa la aprobación, lo que programa un admin espera a un super admin (lo aplica la base de datos). Por ahora se publica a mano en cada red
 - `/equipo` solo super admin
 - `/portal` solo subcontratistas

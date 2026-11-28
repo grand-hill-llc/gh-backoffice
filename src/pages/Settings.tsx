@@ -22,13 +22,14 @@ type Settings = {
   company_email: string | null;
   company_license: string | null;
   staff_lang: "es" | "en";
+  posts_require_approval: boolean;
 };
 type TextKey = "proposal_terms" | "company_address" | "company_phone" | "company_email" | "company_license";
 type Staff = { id: string; full_name: string | null; email: string | null; role: "super_admin" | "admin" };
 
 const COLUMNS =
   "website_lead_owner, digest_enabled, digest_hour, digest_muted, expiry_days, subs_alerts_enabled, default_markup_pct, " +
-  "proposal_show_lines, proposal_validity_days, proposal_terms, company_address, company_phone, company_email, company_license, staff_lang";
+  "proposal_show_lines, proposal_validity_days, proposal_terms, company_address, company_phone, company_email, company_license, staff_lang, posts_require_approval";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const blank = (v: string | null) => (v && v.trim() ? v.trim() : null);
 const HOURS = [6, 7, 8, 9, 10, 11];
@@ -327,6 +328,14 @@ export default function SettingsPage() {
               <p className="gh-help" id="settings-terms-help">{t.settings.termsHelp}</p>
             </div>
           </div>
+        </Panel>
+
+        <Panel title={t.settings.contentTitle}>
+          <label className="gh-check">
+            <input type="checkbox" checked={form.posts_require_approval} onChange={(e) => set("posts_require_approval", e.target.checked)} />
+            {t.settings.approval}
+          </label>
+          <p className="gh-help">{t.settings.approvalHelp}</p>
         </Panel>
 
         <Panel title={t.settings.subsTitle}>
