@@ -21,13 +21,14 @@ type Settings = {
   company_phone: string | null;
   company_email: string | null;
   company_license: string | null;
+  staff_lang: "es" | "en";
 };
 type TextKey = "proposal_terms" | "company_address" | "company_phone" | "company_email" | "company_license";
 type Staff = { id: string; full_name: string | null; email: string | null; role: "super_admin" | "admin" };
 
 const COLUMNS =
   "website_lead_owner, digest_enabled, digest_hour, digest_muted, expiry_days, subs_alerts_enabled, default_markup_pct, " +
-  "proposal_show_lines, proposal_validity_days, proposal_terms, company_address, company_phone, company_email, company_license";
+  "proposal_show_lines, proposal_validity_days, proposal_terms, company_address, company_phone, company_email, company_license, staff_lang";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const blank = (v: string | null) => (v && v.trim() ? v.trim() : null);
 const HOURS = [6, 7, 8, 9, 10, 11];
@@ -165,6 +166,23 @@ export default function SettingsPage() {
             </select>
             <p className="gh-help">{t.settings.ownerHelp}</p>
           </div>
+        </Panel>
+
+        <Panel title={t.settings.staffLangTitle}>
+          <div className="gh-field settings-narrow">
+            <label className="gh-field-label" htmlFor="settings-staff-lang">{t.settings.staffLang}</label>
+            <select
+              id="settings-staff-lang"
+              className="gh-input gh-select"
+              value={form.staff_lang}
+              onChange={(e) => set("staff_lang", e.target.value === "en" ? "en" : "es")}
+              aria-describedby="settings-staff-lang-help"
+            >
+              <option value="es">{t.prefs.langs.es}</option>
+              <option value="en">{t.prefs.langs.en}</option>
+            </select>
+          </div>
+          <p className="gh-help" id="settings-staff-lang-help">{t.settings.staffLangHelp}</p>
         </Panel>
 
         <Panel title={t.settings.digestTitle}>

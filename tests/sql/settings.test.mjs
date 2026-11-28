@@ -29,6 +29,8 @@ insert into subcontractors(id,company_name) values ('10000000-0000-0000-0000-000
 insert into profiles(id,email,role) values ('${U.a}','AdrianGerig@gmail.com','super_admin'),('${U.b}','b@t.co','admin') on conflict (id) do update set email=excluded.email, role=excluded.role, subcontractor_id=null;
 insert into profiles(id,email,role,subcontractor_id) values ('${U.x}','x@t.co','subcontractor','10000000-0000-0000-0000-000000000001') on conflict (id) do update set email=excluded.email, role=excluded.role, subcontractor_id=excluded.subcontractor_id;`);
 await db.exec(readFileSync(M+"0007_settings.sql","utf8"));
+// 0015 only adds a column to app_settings.
+await db.exec(readFileSync(M+"0015_staff_language.sql","utf8"));
 let pass=0,fail=0; const ok=(l,c)=>{if(c)pass++;else{fail++;console.log("FAIL",l)}};
 async function as(uid,sql){ await db.exec(`set test.uid='${uid}'; set role authenticated;`); try{return {rows:(await db.query(sql)).rows}}catch(e){return {error:e.message}} finally{await db.exec("reset role;")} }
 const row=(await db.query("select * from app_settings")).rows;
@@ -50,6 +52,10 @@ ok("id column not updatable", !!(await as(U.a,"update app_settings set id=false"
 ok("updated_by not forgeable", !!(await as(U.a,`update app_settings set updated_by='${U.b}'`)).error);
 ok("insert blocked", !!(await as(U.a,"insert into app_settings(id) values (true)")).error);
 ok("delete blocked", !!(await as(U.a,"delete from app_settings")).error);
+ok("staff language defaults to Spanish", (await db.query("select staff_lang from app_settings")).rows[0].staff_lang==="es");
+ok("super admin sets English", (await as(U.a,"update app_settings set staff_lang='en' returning staff_lang")).rows?.[0]?.staff_lang==="en");
+ok("only es or en", !!(await as(U.a,"update app_settings set staff_lang='fr'")).error);
+ok("admin can't change it", (await as(U.b,"update app_settings set staff_lang='es' returning id")).rows?.length===0 || !!(await as(U.b,"update app_settings set staff_lang='es' returning id")).error);
 await db.exec(`delete from profiles where id='${U.b}'`);
 ok("owner cleared when profile removed", (await db.query("select website_lead_owner from app_settings")).rows[0].website_lead_owner===null);
 console.log(`${pass}/${pass+fail} passed`); process.exit(fail?1:0);

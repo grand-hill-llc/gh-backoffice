@@ -20,6 +20,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
   cleanDays,
+  cleanLang,
   DEFAULT_SETTINGS,
   planEmails,
   type AlertSettings,
@@ -99,7 +100,8 @@ Deno.serve(async (req) => {
       .not("next_follow_up", "is", null),
     admin
       .from("app_settings")
-      .select("digest_enabled, digest_hour, digest_muted, expiry_days, subs_alerts_enabled")
+      // "*": works before and after 0015 (staff_lang); a missing column must not drop every setting.
+      .select("*")
       .maybeSingle(),
     admin
       .from("change_orders")
@@ -165,6 +167,7 @@ Deno.serve(async (req) => {
         digestMuted: s.digest_muted ?? [],
         expiryDays: cleanDays(s.expiry_days),
         subsEnabled: s.subs_alerts_enabled,
+        staffLang: cleanLang(s.staff_lang),
       }
     : { ...DEFAULT_SETTINGS, subsEnabled: Deno.env.get("ALERTS_SUBS_ENABLED") === "true" };
   // A preview shows every kind of email, whatever is switched off.

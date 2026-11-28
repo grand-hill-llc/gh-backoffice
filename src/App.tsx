@@ -24,6 +24,7 @@ import SubcontractorDetail from "./pages/subcontractors/SubcontractorDetail";
 import SubcontractorForm from "./pages/subcontractors/SubcontractorForm";
 import SubcontractorList from "./pages/subcontractors/SubcontractorList";
 import SettingsPage from "./pages/Settings";
+import Exports from "./pages/Exports";
 import BidProposal from "./pages/bids/BidProposal";
 import PublicProposal from "./pages/PublicProposal";
 import Team from "./pages/Team";
@@ -75,6 +76,7 @@ export default function App() {
                 <Route path="/proyectos/nuevo" element={<ProjectForm />} />
                 <Route path="/proyectos/:id" element={<ProjectDetail />} />
                 <Route path="/proyectos/:id/editar" element={<ProjectForm />} />
+                <Route path="/exportar" element={<Exports />} />
               </Route>
 
               <Route element={<RequireRole allow={["super_admin"]} />}>

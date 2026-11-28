@@ -39,6 +39,8 @@ ok("invalid email dropped", leadFromSubmission({ form_name: "quote", data: { nam
 ok("flat payload accepted", leadFromSubmission({ name: "Flat", email: "f@x.co" })?.name === "Flat");
 ok("long name cut", (leadFromSubmission({ form_name: "quote", data: { name: "x".repeat(500) } })?.name.length ?? 0) === 200);
 ok("no service", leadFromSubmission({ form_name: "quote", data: { name: "N" } })?.message.startsWith("Solicitud desde el sitio web:"));
+ok("note in English", leadFromSubmission(JSON.parse(body), "quote", "en")?.message.startsWith("Request from the website (Exterior painting):"));
+ok("note defaults to Spanish", leadFromSubmission(JSON.parse(body))?.message.startsWith("Solicitud desde el sitio web"));
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

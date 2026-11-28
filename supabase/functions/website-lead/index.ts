@@ -41,19 +41,21 @@ Deno.serve(async (req) => {
     return json({ error: "bad_request" }, 400);
   }
 
-  const lead = leadFromSubmission(body);
-  // Not our form, or no name: acknowledge so Netlify doesn't retry, but store nothing.
-  if (!lead) return json({ ignored: true });
-
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  // Set in the app (Configuración). "*" so a missing column (before 0015) or table (before 0007) still works.
+  const settings = await db.from("app_settings").select("*").maybeSingle();
+
+  const lead = leadFromSubmission(body, "quote", settings.data?.staff_lang === "en" ? "en" : "es");
+  // Not our form, or no name: acknowledge so Netlify doesn't retry, but store nothing.
+  if (!lead) return json({ ignored: true });
+
   const today = todayInFlorida();
 
   /** The default owner's profile id, or null (lead stays unassigned) if that person has no staff profile. */
   const pickOwner = async (): Promise<string | null> => {
-    // Set in the app (Configuración). Only falls back to the email below if that table isn't there yet.
-    const settings = await db.from("app_settings").select("website_lead_owner").maybeSingle();
+    // Only falls back to the email below if the settings table isn't there yet.
     if (!settings.error && settings.data) {
       const id = settings.data.website_lead_owner as string | null;
       if (!id) return null;

@@ -17,7 +17,9 @@ npm test                # todas
 npm test -- alerts      # solo los archivos cuyo nombre contiene "alerts"
 ```
 
-Necesitan Node 22.6 o superior. No usan Supabase ni red: las de `tests/sql` aplican las migraciones reales en un Postgres en memoria (PGlite) y prueban permisos (RLS), triggers y funciones; las de `tests/unit` prueban los cálculos y reglas de la app y de las Edge Functions. Córrelas antes de cada PR, sobre todo si cambias una migración, un permiso o un cálculo de montos. Una migración nueva se agrega a la lista de migraciones de las pruebas SQL que la necesiten.
+Necesitan Node 22.6 o superior. No usan Supabase ni red: las de `tests/sql` aplican las migraciones reales en un Postgres en memoria (PGlite) y prueban permisos (RLS), triggers y funciones; las de `tests/unit` prueban los cálculos y reglas de la app y de las Edge Functions. Córrelas antes de cada PR, sobre todo si cambias una migración, un permiso o un cálculo de montos.
+
+GitHub las corre solas (junto con la revisión de tipos) en cada PR a `main`: al abrirlo y en cada push posterior a su rama (`.github/workflows/tests.yml`). Un push a una rama sin PR no las corre. Si fallan, el PR muestra el check en rojo con el detalle. Una migración nueva se agrega a la lista de migraciones de las pruebas SQL que la necesiten.
 
 ## Variables de entorno
 
@@ -54,7 +56,8 @@ Necesitan Node 22.6 o superior. No usan Supabase ni red: las de `tests/sql` apli
    Luego `supabase/migrations/0011_estimates.sql` (cotizaciones de subcontratistas y conceptos del estimado de cada bid). Aplícala **antes** de desplegar la versión de la app que la usa.
    Luego `supabase/migrations/0012_proposal_settings.sql` (datos de la empresa, condiciones y vigencia de la propuesta al cliente). Aplícala **antes** de desplegar la versión de la app que la usa.
    Luego `supabase/migrations/0013_proposal_links.sql` (enlace para que el cliente acepte o rechace la propuesta en línea). Aplícala **antes** de desplegar la app, y vuelve a desplegar `email-alerts` para avisar al equipo de cada respuesta.
-   Por último `supabase/migrations/0014_proposal_emails.sql` (registro de las propuestas enviadas por correo desde la app). Aplícala **antes** de desplegar la app y despliega la función `send-proposal` (ver "Envío de propuestas por correo").
+   Luego `supabase/migrations/0014_proposal_emails.sql` (registro de las propuestas enviadas por correo desde la app). Aplícala **antes** de desplegar la app y despliega la función `send-proposal` (ver "Envío de propuestas por correo").
+   Por último `supabase/migrations/0015_staff_language.sql` (idioma de los avisos al equipo: resumen diario, respuestas a propuestas y nota de las solicitudes del sitio web). Aplícala **antes** de desplegar la app y vuelve a desplegar `email-alerts` y `website-lead`.
 2. Despliega la función de gestión de usuarios (ver abajo). Desde ese momento, un super admin invita, cambia roles y quita accesos en **Equipo** (`/equipo`), sin entrar a Supabase.
 
 | Rol | Acceso |
@@ -190,5 +193,6 @@ Secretos opcionales: `PROPOSALS_FROM` (remitente), `PROPOSALS_REPLY_TO` y `APP_U
 - `/` redirige según el rol
 - `/dashboard`, `/leads`, `/bids`, `/clientes`, `/subcontratistas`, `/proyectos` personal interno (super admin y admin), cada uno con `/nuevo`, `/:id` y `/:id/editar`
 - `/proyectos/nuevo?bid=<id>` crea un proyecto copiando los datos de un bid ganado
+- `/exportar` CSV para contabilidad (super admin y admin): movimientos, proyectos, órdenes de cambio y subcontratistas, en formato Excel o, para movimientos y subcontratistas, listo para importar en QuickBooks
 - `/equipo` solo super admin
 - `/portal` solo subcontratistas

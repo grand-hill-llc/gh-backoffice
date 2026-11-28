@@ -789,3 +789,22 @@
 .proposal-mail .mail-form { background: var(--surface); }
 @media print { .proposal-mail { display: none; } }
 @media (max-width: 640px) { .proposal-link-row { flex-wrap: wrap; } .proposal-link-row .gh-input { flex-basis: 100%; } }
+
+/* Export page */
+.exports { display: grid; gap: var(--space-3); max-width: 760px; }
+.exports-period { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
+.exports-period .segmented { justify-self: start; }
+.exports-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 220px)); gap: var(--space-2); }
+.exports-report { display: grid; gap: var(--space-1); }
+.exports-report > p { margin: 0; }
+.exports-format { display: grid; gap: 6px; justify-items: start; }
+.exports-status { margin: 0; font-weight: 600; }
+.exports-status.is-done { color: var(--success, inherit); }
+.exports-status.is-failed { color: var(--danger, inherit); }
+@media (max-width: 640px) { .exports-dates { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.exports .segmented button { flex: 0 0 auto; padding: 0 14px; }
+.exports-dates .gh-input { min-width: 0; width: 100%; }
+@media (max-width: 640px) {
+  .exports-period .segmented { justify-self: stretch; }
+  .exports-period .segmented button { flex: 1 1 auto; padding: 0 6px; }
+}

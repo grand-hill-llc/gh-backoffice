@@ -137,6 +137,18 @@ const rj2 = plan({ now: new Date("2026-11-23T18:00:00Z"), proposals: [pd({ statu
 ok("rejected once to super admin creator", rj2.length === 1 && rj2[0].text.includes("El cliente rechazó") && rj2[0].text.includes("Comentario: Too high"));
 ok("old answer skipped", plan({ now: new Date("2026-11-30T18:00:00Z"), proposals: [pd({})], docs: [], leads: [] }).length === 0);
 ok("proposal key", pr[0].key.startsWith("proposal:pl1:2026-11-23T17:00:00Z:"));
+// ---- team emails in English (Configuración > staff_lang)
+const en = { staffLang: "en" as const };
+const prEn = plan({ now: new Date("2026-11-23T18:00:00Z"), proposals: [pd({})], docs: [], leads: [], settings: en });
+ok("proposal in English", prEn[0].subject.includes("Proposal accepted") && prEn[0].text.includes("Ana Cliente accepted the proposal") && prEn[0].text.includes("$15,996") && prEn[0].text.includes("Won") && prEn[0].html.includes("Open the bid and create the project"));
+const rjEn = plan({ now: new Date("2026-11-23T18:00:00Z"), proposals: [pd({ status: "rejected", signer_name: null, client_note: "Too high", created_by: "a" })], docs: [], leads: [], settings: en });
+ok("declined in English", rjEn[0].text.includes("The client declined") && rjEn[0].text.includes("Comment: Too high"));
+const digEn = plan({ settings: en }).find((e) => e.kind === "digest")!;
+ok("digest in English", /^Grand Hill · \d+ items? for today$/.test(digEn.subject) && digEn.html.includes("this needs attention") && digEn.html.includes("Open the overview") && !digEn.html.includes("Documentos"));
+ok("digest doc labels in English", !digEn.html.includes("Seguro (COI)") && (digEn.html.includes("Insurance (COI)") || digEn.html.includes("License") || !digEn.html.includes("COI")));
+const subEmails = plan({ settings: en }).filter((e) => e.kind === "reminder" || e.kind === "review");
+ok("sub emails stay bilingual", subEmails.every((e) => e.text.includes("portal")) && subEmails.some((e) => /[áéíóú]|Sube|Tu /.test(e.text)));
+ok("unknown language falls back to Spanish", plan({ settings: { staffLang: "fr" as unknown as "es" } }).find((e) => e.kind === "digest")!.subject.includes("de hoy"));
 
 // SQL
 const db = new PGlite();

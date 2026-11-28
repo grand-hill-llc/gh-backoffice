@@ -69,7 +69,13 @@ const clean = (v: unknown, max = 2000) => {
  * Maps a Netlify form submission (the "quote" form on grandhillcorp.com) to a lead.
  * Returns null when it isn't that form or lacks a name, so stray submissions are ignored.
  */
-export function leadFromSubmission(body: unknown, formName = "quote"): LeadInput | null {
+/** The note left in the lead's history, in the team's language (Configuración). */
+const NOTE = {
+  es: (service: string | null) => `Solicitud desde el sitio web${service ? ` (${service})` : ""}:`,
+  en: (service: string | null) => `Request from the website${service ? ` (${service})` : ""}:`,
+};
+
+export function leadFromSubmission(body: unknown, formName = "quote", lang: "es" | "en" = "es"): LeadInput | null {
   const sub = (body ?? {}) as { form_name?: string; data?: Record<string, unknown> } & Record<string, unknown>;
   if (sub.form_name && sub.form_name !== formName) return null;
   const data = (sub.data ?? sub) as Record<string, unknown>;
@@ -82,7 +88,7 @@ export function leadFromSubmission(body: unknown, formName = "quote"): LeadInput
   const details = clean(data.details, 4000);
 
   const interest = [service, details].filter(Boolean).join(". ").slice(0, 1000) || null;
-  const message = [`Solicitud desde el sitio web${service ? ` (${service})` : ""}:`, details ?? "—"].join("\n");
+  const message = [NOTE[lang === "en" ? "en" : "es"](service), details ?? "—"].join("\n");
 
   return { name, email, phone: clean(data.phone, 50), location: clean(data.location, 200), interest, message };
 }
