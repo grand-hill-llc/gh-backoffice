@@ -57,7 +57,9 @@ GitHub las corre solas (junto con la revisión de tipos) en cada PR a `main`: al
    Luego `supabase/migrations/0012_proposal_settings.sql` (datos de la empresa, condiciones y vigencia de la propuesta al cliente). Aplícala **antes** de desplegar la versión de la app que la usa.
    Luego `supabase/migrations/0013_proposal_links.sql` (enlace para que el cliente acepte o rechace la propuesta en línea). Aplícala **antes** de desplegar la app, y vuelve a desplegar `email-alerts` para avisar al equipo de cada respuesta.
    Luego `supabase/migrations/0014_proposal_emails.sql` (registro de las propuestas enviadas por correo desde la app). Aplícala **antes** de desplegar la app y despliega la función `send-proposal` (ver "Envío de propuestas por correo").
-   Por último `supabase/migrations/0015_staff_language.sql` (idioma de los avisos al equipo: resumen diario, respuestas a propuestas y nota de las solicitudes del sitio web). Aplícala **antes** de desplegar la app y vuelve a desplegar `email-alerts` y `website-lead`.
+   Luego `supabase/migrations/0015_staff_language.sql` (idioma de los avisos al equipo: resumen diario, respuestas a propuestas y nota de las solicitudes del sitio web). Aplícala **antes** de desplegar la app y vuelve a desplegar `email-alerts` y `website-lead`.
+   Luego `supabase/migrations/0016_social_posts.sql` (planificador de contenido para redes: publicaciones, sus imágenes y videos en el bucket privado `social-media`, y el ajuste de aprobación). Aplícala **antes** de desplegar la app.
+   Por último `supabase/migrations/0017_social_publishing.sql` (publicación automática en Facebook e Instagram: registro por red y tarea cada 5 minutos). Aplícala **antes** de desplegar la app; no publica nada hasta conectar Meta y activarlo (ver "Publicación en Facebook e Instagram").
 2. Despliega la función de gestión de usuarios (ver abajo). Desde ese momento, un super admin invita, cambia roles y quita accesos en **Equipo** (`/equipo`), sin entrar a Supabase.
 
 | Rol | Acceso |
@@ -184,6 +186,33 @@ supabase functions deploy send-proposal
 
 Secretos opcionales: `PROPOSALS_FROM` (remitente), `PROPOSALS_REPLY_TO` y `APP_URL` (por defecto `https://app.grandhillcorp.com`). Sin la función desplegada, el botón avisa que el envío todavía no está activo.
 
+## Publicación en Facebook e Instagram (función `social-publish`)
+
+Publica las publicaciones programadas en `/contenido` en la Página de Facebook de Grand Hill y en su cuenta profesional de Instagram (vinculada a la Página). Cada 5 minutos `pg_cron` llama a la función, que publica lo que ya llegó a su hora; también se puede usar **Publicar ahora** en cada publicación programada. El resultado queda por red en la ficha de la publicación ("Publicación en redes") y, si falla, en el calendario ("No se pudo publicar") con **Reintentar**. LinkedIn y Google siguen siendo a mano.
+
+Reglas de Meta que la app avisa antes de publicar: Instagram necesita al menos una imagen o video, solo acepta imágenes JPG, hasta 10 archivos y 2200 caracteres; en Facebook un video va solo. Un video de Instagram puede tardar unos minutos: queda "preparando el video" y la siguiente pasada lo publica.
+
+Conexión con Meta (una vez, como administrador del portafolio comercial de Grand Hill):
+
+1. **Instagram vinculado a la Página.** En la Página de Facebook: Configuración > Cuentas vinculadas > Instagram. La cuenta de Instagram debe ser profesional (empresa o creador).
+2. **App de Meta.** En developers.facebook.com > Mis apps > Crear app, de tipo **Business** (empresa) y asociada al portafolio de Grand Hill. Agrega los permisos `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `instagram_basic`, `instagram_content_publish` y `business_management`. Pásala a modo **Activo/Live** (pide una URL de política de privacidad, por ejemplo la del sitio web); en modo desarrollo lo publicado puede quedar visible solo para quienes tienen rol en la app.
+3. **Usuario del sistema y token.** En business.facebook.com > Configuración del negocio > Usuarios > Usuarios del sistema: crea uno (rol administrador), asígnale la **Página** (control total), la **cuenta de Instagram** y la **app**. Luego **Generar token**: elige la app, caducidad **Nunca** y marca los permisos del paso 2. Copia el token (solo se muestra una vez).
+4. **ID de la Página.** En Configuración del negocio > Cuentas > Páginas, selecciona la Página: el identificador aparece en el panel.
+5. **Secretos y despliegue** (desde la carpeta del proyecto). La función usa el mismo `ALERTS_CRON_SECRET` y el secreto de Vault `email_alerts_secret` de las alertas por correo, que ya existen:
+
+```bash
+supabase secrets set META_ACCESS_TOKEN=EL_TOKEN META_PAGE_ID=EL_ID_DE_LA_PAGINA
+```
+
+```bash
+supabase functions deploy social-publish --no-verify-jwt
+```
+
+6. En **Configuración > Contenido para redes**, pulsa **Probar conexión**: debe mostrar el nombre de la Página y la cuenta de Instagram. Después activa **Publicar automáticamente en Facebook e Instagram** y guarda.
+7. Prueba con una publicación de prueba programada para dentro de unos minutos (o con **Publicar ahora**), revisa que se vea en ambas redes con una cuenta que no administre la Página, y bórrala de las redes.
+
+Sin el paso 6 activado no se publica nada automáticamente. Si el token deja de funcionar (por ejemplo, alguien quita el acceso del usuario del sistema), las publicaciones quedan en "No se pudo publicar" con el mensaje de Meta.
+
 ## Rutas
 
 - `/login` inicio de sesión y recuperación de contraseña
@@ -194,5 +223,6 @@ Secretos opcionales: `PROPOSALS_FROM` (remitente), `PROPOSALS_REPLY_TO` y `APP_U
 - `/dashboard`, `/leads`, `/bids`, `/clientes`, `/subcontratistas`, `/proyectos` personal interno (super admin y admin), cada uno con `/nuevo`, `/:id` y `/:id/editar`
 - `/proyectos/nuevo?bid=<id>` crea un proyecto copiando los datos de un bid ganado
 - `/exportar` CSV para contabilidad (super admin y admin): movimientos, proyectos, órdenes de cambio y subcontratistas, en formato Excel o, para movimientos y subcontratistas, listo para importar en QuickBooks
+- `/contenido` planificador de redes (super admin y admin): calendario mensual en hora de Florida, ideas sin fecha y publicaciones por aprobar; `/contenido/nuevo` y `/contenido/:id` para crear, programar, aprobar o devolver y marcar como publicada. Si en **Configuración** se activa la aprobación, lo que programa un admin espera a un super admin (lo aplica la base de datos). Con Meta conectado, Facebook e Instagram se publican solos a la hora programada (ver "Publicación en Facebook e Instagram"); LinkedIn y Google, a mano
 - `/equipo` solo super admin
 - `/portal` solo subcontratistas

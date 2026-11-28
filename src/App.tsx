@@ -25,6 +25,8 @@ import SubcontractorForm from "./pages/subcontractors/SubcontractorForm";
 import SubcontractorList from "./pages/subcontractors/SubcontractorList";
 import SettingsPage from "./pages/Settings";
 import Exports from "./pages/Exports";
+import ContentCalendar from "./pages/content/ContentCalendar";
+import PostForm from "./pages/content/PostForm";
 import BidProposal from "./pages/bids/BidProposal";
 import PublicProposal from "./pages/PublicProposal";
 import Team from "./pages/Team";
@@ -76,6 +78,9 @@ export default function App() {
                 <Route path="/proyectos/nuevo" element={<ProjectForm />} />
                 <Route path="/proyectos/:id" element={<ProjectDetail />} />
                 <Route path="/proyectos/:id/editar" element={<ProjectForm />} />
+                <Route path="/contenido" element={<ContentCalendar />} />
+                <Route path="/contenido/nuevo" element={<PostForm />} />
+                <Route path="/contenido/:id" element={<PostForm />} />
                 <Route path="/exportar" element={<Exports />} />
               </Route>
 
