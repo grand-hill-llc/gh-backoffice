@@ -1,0 +1,31 @@
+# Runs the test suite and the type check on every pull request to main:
+# when it is opened and on each later push to its branch. Pushes to a branch
+# without a pull request don't run it (saves Actions minutes).
+name: Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Tests
+        run: npm test
+      - name: Type check
+        run: npx tsc --noEmit
