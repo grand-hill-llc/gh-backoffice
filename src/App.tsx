@@ -79,8 +79,8 @@ export default function App() {
                 <Route path="/proyectos/:id" element={<ProjectDetail />} />
                 <Route path="/proyectos/:id/editar" element={<ProjectForm />} />
                 <Route path="/contenido" element={<ContentCalendar />} />
-                <Route path="/contenido/nuevo" element={<PostForm key="new" />} />
-                <Route path="/contenido/:id" element={<PostForm key="edit" />} />
+                <Route path="/contenido/nuevo" element={<PostForm />} />
+                <Route path="/contenido/:id" element={<PostForm />} />
                 <Route path="/exportar" element={<Exports />} />
               </Route>
 

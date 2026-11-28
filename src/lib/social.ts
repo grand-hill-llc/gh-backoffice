@@ -110,6 +110,7 @@ export type PostWarning =
   | { kind: "instagramNeedsMedia" }
   | { kind: "instagramTooMany"; max: number }
   | { kind: "instagramFormat" }
+  | { kind: "facebookVideoAlone" }
   | { kind: "inPast" };
 
 /** What would make a network reject the post, or is likely a mistake. Advisory: saving still works. */
@@ -126,6 +127,7 @@ export function postWarnings(
     if (media.length > INSTAGRAM_MAX_MEDIA) out.push({ kind: "instagramTooMany", max: INSTAGRAM_MAX_MEDIA });
     if (media.some((m) => m.mime_type === "image/png" || m.mime_type === "image/webp")) out.push({ kind: "instagramFormat" });
   }
+  if (p.channels.includes("facebook") && media.length > 1 && media.some((m) => m.mime_type.startsWith("video/"))) out.push({ kind: "facebookVideoAlone" });
   if (p.status !== "published" && p.scheduled_at && p.scheduled_at < now) out.push({ kind: "inPast" });
   return out;
 }
@@ -142,3 +144,25 @@ export function mediaPathFor(postId: string, fileName: string): string {
 }
 
 export const isVideo = (mime: string) => mime.startsWith("video/");
+
+/** Networks the app publishes to by itself (migration 0017); the rest are posted by hand. */
+export const AUTO_CHANNELS: Channel[] = ["facebook", "instagram"];
+export type DeliveryStatus = "publishing" | "processing" | "published" | "failed";
+export type Delivery = {
+  id: string;
+  post_id: string;
+  channel: "facebook" | "instagram";
+  status: DeliveryStatus;
+  attempts: number;
+  permalink: string | null;
+  error: string | null;
+  finished_at: string | null;
+};
+export const DELIVERY_COLUMNS = "id, post_id, channel, status, attempts, permalink, error, finished_at";
+
+/** Known error codes from the publishing function; anything else is Meta's own message. */
+export function deliveryErrorKey(error: string | null): string | null {
+  if (!error) return null;
+  if (error.startsWith("instagram_container_")) return "instagram_container_error";
+  return error;
+}

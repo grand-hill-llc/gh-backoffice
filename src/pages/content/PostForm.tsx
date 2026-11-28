@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import {
+  AUTO_CHANNELS,
   CAPTION_LIMITS,
   CHANNELS,
+  DELIVERY_COLUMNS,
+  deliveryErrorKey,
   isoToLocal,
   isVideo,
   localToIso,
@@ -14,12 +17,14 @@ import {
   POST_COLUMNS,
   postWarnings,
   type Channel,
+  type Delivery,
   type PostMedia,
   type PostStatus,
   type PostWarning,
   type SocialPost,
 } from "../../lib/social";
 import { ownerName } from "../../lib/leads";
+import { fileNameOf } from "../../lib/subcontractors";
 import { useAuth } from "../../auth/AuthProvider";
 import { PageHeader } from "../../components/ui";
 import DeleteZone from "../../components/DeleteZone";
@@ -46,8 +51,14 @@ function warningText(w: PostWarning, c: Dict["content"]): string {
   }
 }
 
-/** Create (/contenido/nuevo) and edit (/contenido/:id) a post, and move it through its statuses. */
+/** Create (/contenido/nuevo) and edit (/contenido/:id) a post, and move it through its statuses.
+ *  Keyed by id so going from one post to another (e.g. after duplicating) starts clean. */
 export default function PostForm() {
+  const { id } = useParams();
+  return <PostEditor key={id ?? "new"} />;
+}
+
+function PostEditor() {
   const { id } = useParams();
   const editing = !!id;
   const t = useT();
@@ -66,6 +77,9 @@ export default function PostForm() {
   const [removed, setRemoved] = useState<PostMedia[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const [approvalOn, setApprovalOn] = useState(false);
+  const [autoOn, setAutoOn] = useState(false);
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [publishing, setPublishing] = useState(false);
   const [loading, setLoading] = useState(editing);
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -79,20 +93,26 @@ export default function PostForm() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
+    // "*" so a column from a migration not applied yet doesn't break the page.
     supabase
       .from("app_settings")
-      .select("posts_require_approval")
+      .select("*")
       .maybeSingle()
-      .then(({ data }) => setApprovalOn(!!(data as { posts_require_approval?: boolean } | null)?.posts_require_approval));
+      .then(({ data }) => {
+        const s = data as { posts_require_approval?: boolean; meta_autopublish?: boolean } | null;
+        setApprovalOn(!!s?.posts_require_approval);
+        setAutoOn(!!s?.meta_autopublish);
+      });
   }, []);
 
   useEffect(() => {
     if (!id) return;
     let active = true;
     (async () => {
-      const [p, m] = await Promise.all([
+      const [p, m, d] = await Promise.all([
         supabase.from("social_posts").select(POST_COLUMNS).eq("id", id).maybeSingle(),
         supabase.from("social_post_media").select("id, post_id, position, path, mime_type, size_bytes").eq("post_id", id).order("position"),
+        supabase.from("social_deliveries").select(DELIVERY_COLUMNS).eq("post_id", id),
       ]);
       if (!active) return;
       setLoading(false);
@@ -100,6 +120,7 @@ export default function PostForm() {
       const row = p.data as SocialPost;
       const media = (m.data ?? []) as PostMedia[];
       setPost(row);
+      setDeliveries((d.data ?? []) as Delivery[]);
       setValues({
         title: row.title,
         body: row.body,
@@ -137,6 +158,36 @@ export default function PostForm() {
 
   const status: PostStatus = post?.status ?? "draft";
   const needsApproval = approvalOn && !isSuper;
+  const savedChannels = post?.channels ?? [];
+  const hasAuto = savedChannels.some((ch) => AUTO_CHANNELS.includes(ch));
+  const hasManual = savedChannels.some((ch) => !AUTO_CHANNELS.includes(ch));
+  const canPublishNow = autoOn && hasAuto && status === "scheduled";
+  const deliveryError = (e: string | null) => {
+    const key = deliveryErrorKey(e);
+    return key && key in c.deliveryErrors ? c.deliveryErrors[key as keyof typeof c.deliveryErrors] : e ?? "";
+  };
+
+  /** Asks the publishing function to post it now on Facebook and Instagram (also retries failures). */
+  const publishNow = async () => {
+    if (!post) return;
+    setError(null);
+    setMessage(null);
+    setPublishing(true);
+    const { data, error: fnError } = await supabase.functions.invoke("social-publish", { body: { post_id: post.id } });
+    let code: string | null = (data as { error?: string } | null)?.error ?? null;
+    if (fnError) {
+      const ctx = (fnError as { context?: Response }).context;
+      code = ctx && typeof ctx.json === "function" ? ((await ctx.json().catch(() => null)) as { error?: string } | null)?.error ?? null : null;
+    }
+    const [p, d] = await Promise.all([
+      supabase.from("social_posts").select(POST_COLUMNS).eq("id", post.id).single(),
+      supabase.from("social_deliveries").select(DELIVERY_COLUMNS).eq("post_id", post.id),
+    ]);
+    setPublishing(false);
+    if (p.data) setPost(p.data as SocialPost);
+    setDeliveries((d.data ?? []) as Delivery[]);
+    if (fnError || code) setError(code ? deliveryError(code) : c.publishNowFailed);
+  };
   const scheduledAt = values.when ? localToIso(values.when) : null;
   const warnings = useMemo(
     () => postWarnings({ body: values.body, channels: values.channels, scheduled_at: scheduledAt, status }, items.map((i) => ({ mime_type: i.mime }))),
@@ -286,6 +337,44 @@ export default function PostForm() {
     save(editing ? status : "draft");
   };
 
+  /** New draft with the same copy, networks, notes and files; no date, so nothing goes out by itself. */
+  const [duplicating, setDuplicating] = useState(false);
+  const duplicate = async () => {
+    if (!post) return;
+    setError(null);
+    setMessage(null);
+    setDuplicating(true);
+    const ins = await supabase
+      .from("social_posts")
+      .insert({ title: c.copyTitle(post.title).slice(0, 200), body: post.body, channels: post.channels, notes: post.notes, status: "draft", scheduled_at: null })
+      .select("id")
+      .single();
+    if (ins.error || !ins.data) {
+      setDuplicating(false);
+      return setError(c.duplicateFailed);
+    }
+    const newId = ins.data.id as string;
+    let mediaOk = true;
+    const saved = items.filter((i): i is Extract<Item, { kind: "saved" }> => i.kind === "saved");
+    for (const [pos, it] of saved.entries()) {
+      const path = mediaPathFor(newId, fileNameOf(it.row.path));
+      const cp = await supabase.storage.from(MEDIA_BUCKET).copy(it.row.path, path);
+      if (cp.error) {
+        mediaOk = false;
+        continue;
+      }
+      const row = await supabase
+        .from("social_post_media")
+        .insert({ post_id: newId, path, mime_type: it.row.mime_type, size_bytes: it.row.size_bytes, position: pos });
+      if (row.error) {
+        mediaOk = false;
+        await supabase.storage.from(MEDIA_BUCKET).remove([path]);
+      }
+    }
+    setDuplicating(false);
+    navigate(`/contenido/${newId}`, { state: { message: mediaOk ? c.duplicated : null, mediaError: !mediaOk } });
+  };
+
   const onDelete = async () => {
     setDeleting(true);
     setDeleteError(null);
@@ -319,8 +408,17 @@ export default function PostForm() {
   return (
     <>
       <Link className="back-link" to="/contenido">← {c.back}</Link>
-      <div className="detail-header">
-        <PageHeader title={editing ? post?.title || c.editTitle : c.newTitle} />
+      <div className="detail-header post-header">
+        <div className="detail-title-row">
+          <PageHeader title={editing ? post?.title || c.editTitle : c.newTitle} />
+          {post && (
+            <div className="detail-actions">
+              <button className="gh-btn gh-btn-secondary gh-btn-sm" type="button" onClick={duplicate} disabled={duplicating || busy}>
+                {duplicating ? c.duplicating : c.duplicate}
+              </button>
+            </div>
+          )}
+        </div>
         {post && (
           <div className="detail-meta">
             <PostStatusTag status={post.status} />
@@ -340,6 +438,39 @@ export default function PostForm() {
             <strong>{c.reviewNote(person(post.reviewed_by))}:</strong> {post.review_note}
           </p>
         </div>
+      )}
+
+      {deliveries.length > 0 && post && (
+        <section className="panel deliveries" aria-labelledby="deliveries-title">
+          <div className="panel-head">
+            <h2 className="gh-label panel-title" id="deliveries-title">{c.deliveriesTitle}</h2>
+          </div>
+          <ul className="delivery-list">
+            {post.channels.map((ch) => {
+              const d = deliveries.find((x) => x.channel === ch);
+              return (
+                <li key={ch} className={`delivery is-${d?.status ?? "manual"}`}>
+                  <span className="delivery-channel">{c.channels[ch]}</span>
+                  <span className="delivery-state">
+                    {d ? c.deliveryStatus[d.status] : AUTO_CHANNELS.includes(ch) ? "—" : c.manualChannel}
+                    {d?.status === "published" && d.permalink && (
+                      <>
+                        {" · "}
+                        <a href={d.permalink} target="_blank" rel="noreferrer">{c.viewPost}</a>
+                      </>
+                    )}
+                  </span>
+                  {d?.status === "failed" && <span className="delivery-error">{deliveryError(d.error)}</span>}
+                  {d?.status === "failed" && status === "scheduled" && (
+                    <button className="gh-link delivery-retry" type="button" disabled={publishing} onClick={publishNow}>
+                      {publishing ? c.publishingNow : c.retry}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
 
       <form className="gh-form panel-form" onSubmit={onSubmit} noValidate>
@@ -561,9 +692,16 @@ export default function PostForm() {
               )}
               {status === "scheduled" && (
                 <>
-                  <button className="gh-btn gh-btn-primary" type="submit" disabled={busy}>{busy ? t.common.saving : c.saveChanges}</button>
-                  <button className="gh-btn gh-btn-secondary" type="button" disabled={busy} onClick={() => setPanel("publish")}>{c.markPublished}</button>
-                  <button className="gh-link" type="button" disabled={busy} onClick={() => save("draft")}>{c.toDraft}</button>
+                  <button className="gh-btn gh-btn-primary" type="submit" disabled={busy || publishing}>{busy ? t.common.saving : c.saveChanges}</button>
+                  {canPublishNow && (
+                    <button className="gh-btn gh-btn-secondary" type="button" disabled={busy || publishing} onClick={publishNow}>
+                      {publishing ? c.publishingNow : c.publishNow}
+                    </button>
+                  )}
+                  {(!autoOn || hasManual || !hasAuto) && (
+                    <button className="gh-btn gh-btn-secondary" type="button" disabled={busy || publishing} onClick={() => setPanel("publish")}>{c.markPublished}</button>
+                  )}
+                  <button className="gh-link" type="button" disabled={busy || publishing} onClick={() => save("draft")}>{c.toDraft}</button>
                 </>
               )}
               {status === "published" && (
@@ -572,7 +710,9 @@ export default function PostForm() {
               {!editing && <Link className="gh-link" to="/contenido">{t.common.cancel}</Link>}
             </div>
             {((status === "draft" && needsApproval) || status === "scheduled") && (
-              <p className="gh-small gh-muted form-hint">{status === "draft" ? c.approvalOn : c.publishHint}</p>
+              <p className="gh-small gh-muted form-hint">
+                {status === "draft" ? c.approvalOn : autoOn && hasAuto ? (hasManual ? c.autoHint : c.autoHintOnlyAuto) : c.publishHint}
+              </p>
             )}
           </>
         )}

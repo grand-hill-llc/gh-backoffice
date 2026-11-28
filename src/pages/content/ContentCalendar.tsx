@@ -16,6 +16,7 @@ export default function ContentCalendar() {
   const month = /^\d{4}-\d{2}$/.test(params.get("mes") ?? "") ? params.get("mes")! : today.slice(0, 7);
   const [posts, setPosts] = useState<SocialPost[] | null>(null);
   const [error, setError] = useState<"none" | "missing" | "failed">("none");
+  const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -27,6 +28,12 @@ export default function ContentCalendar() {
         if (error) return setError(/schema cache|does not exist|relation/i.test(error.message) ? "missing" : "failed");
         setPosts((data ?? []) as SocialPost[]);
       });
+    // Publishing failures (migration 0017); without that table there are none to show.
+    supabase
+      .from("social_deliveries")
+      .select("post_id")
+      .eq("status", "failed")
+      .then(({ data }) => active && setFailedIds(new Set(((data ?? []) as { post_id: string }[]).map((d) => d.post_id))));
     return () => {
       active = false;
     };
@@ -49,6 +56,7 @@ export default function ContentCalendar() {
   const grid = monthGrid(month);
   const monthDays = grid.filter((d) => d.inMonth && byDay.has(d.day));
   const undated = (posts ?? []).filter((p) => !postDate(p)).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  const failed = (posts ?? []).filter((p) => p.status === "scheduled" && failedIds.has(p.id));
   const pending = (posts ?? []).filter((p) => p.status === "pending").sort((a, b) => (a.scheduled_at ?? "").localeCompare(b.scheduled_at ?? ""));
 
   const [y, m] = month.split("-").map(Number);
@@ -65,7 +73,12 @@ export default function ContentCalendar() {
   };
 
   const chip = (p: SocialPost) => (
-    <Link key={p.id} to={`/contenido/${p.id}`} className={`cal-post is-${p.status}`} title={`${c.statuses[p.status]} · ${p.title}`}>
+    <Link
+      key={p.id}
+      to={`/contenido/${p.id}`}
+      className={`cal-post is-${p.status}${failedIds.has(p.id) && p.status === "scheduled" ? " is-failed" : ""}`}
+      title={`${failedIds.has(p.id) && p.status === "scheduled" ? c.failedTitle : c.statuses[p.status]} · ${p.title}`}
+    >
       <span className="cal-post-time">{time(p)}</span>
       <span className="cal-post-title">{p.title}</span>
       <ChannelBadges channels={p.channels} />
@@ -143,6 +156,19 @@ export default function ContentCalendar() {
           </section>
 
           <aside className="content-side">
+            {failed.length > 0 && (
+              <section className="panel is-alert">
+                <div className="panel-head"><h2 className="gh-label panel-title">{c.failedTitle}</h2></div>
+                <ul className="side-list">
+                  {failed.map((p) => (
+                    <li key={p.id}>
+                      <Link className="row-link" to={`/contenido/${p.id}`}>{p.title}</Link>
+                      <span className="side-meta"><ChannelBadges channels={p.channels} /></span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             {pending.length > 0 && (
               <section className="panel">
                 <div className="panel-head"><h2 className="gh-label panel-title">{c.pendingTitle}</h2></div>

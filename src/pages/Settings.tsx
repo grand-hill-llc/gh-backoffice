@@ -23,13 +23,14 @@ type Settings = {
   company_license: string | null;
   staff_lang: "es" | "en";
   posts_require_approval: boolean;
+  meta_autopublish: boolean;
 };
 type TextKey = "proposal_terms" | "company_address" | "company_phone" | "company_email" | "company_license";
 type Staff = { id: string; full_name: string | null; email: string | null; role: "super_admin" | "admin" };
 
 const COLUMNS =
   "website_lead_owner, digest_enabled, digest_hour, digest_muted, expiry_days, subs_alerts_enabled, default_markup_pct, " +
-  "proposal_show_lines, proposal_validity_days, proposal_terms, company_address, company_phone, company_email, company_license, staff_lang, posts_require_approval";
+  "proposal_show_lines, proposal_validity_days, proposal_terms, company_address, company_phone, company_email, company_license, staff_lang, posts_require_approval, meta_autopublish";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const blank = (v: string | null) => (v && v.trim() ? v.trim() : null);
 const HOURS = [6, 7, 8, 9, 10, 11];
@@ -57,6 +58,20 @@ export default function SettingsPage() {
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null);
+  const [meta, setMeta] = useState<{ busy: boolean; ok?: boolean; text?: string }>({ busy: false });
+
+  /** Asks the publishing function whether the Meta token reaches the Page and Instagram. */
+  const testMeta = async () => {
+    setMeta({ busy: true });
+    const { data, error } = await supabase.functions.invoke("social-publish", { body: { action: "status" } });
+    const r = data as { ok?: boolean; page?: string; instagram?: string | null; error?: string } | null;
+    if (error || !r) return setMeta({ busy: false, ok: false, text: t.settings.connectionFailed(t.content.publishNowFailed) });
+    if (!r.ok) {
+      const known = r.error && r.error in t.content.deliveryErrors ? t.content.deliveryErrors[r.error as keyof typeof t.content.deliveryErrors] : r.error ?? "";
+      return setMeta({ busy: false, ok: false, text: t.settings.connectionFailed(known) });
+    }
+    setMeta({ busy: false, ok: !!r.instagram, text: t.settings.connected(r.page ?? "", r.instagram ?? null) });
+  };
 
   const load = useCallback(async () => {
     const [s, p] = await Promise.all([
@@ -336,6 +351,19 @@ export default function SettingsPage() {
             {t.settings.approval}
           </label>
           <p className="gh-help">{t.settings.approvalHelp}</p>
+          <label className="gh-check">
+            <input type="checkbox" checked={form.meta_autopublish} onChange={(e) => set("meta_autopublish", e.target.checked)} />
+            {t.settings.autopublish}
+          </label>
+          <p className="gh-help">{t.settings.autopublishHelp}</p>
+          <div className="meta-test">
+            <button className="gh-btn gh-btn-secondary gh-btn-sm" type="button" onClick={testMeta} disabled={meta.busy}>
+              {meta.busy ? t.settings.testing : t.settings.testConnection}
+            </button>
+            {meta.text && (
+              <p className={`gh-small meta-test-result ${meta.ok ? "is-ok" : "is-error"}`} role="status">{meta.text}</p>
+            )}
+          </div>
         </Panel>
 
         <Panel title={t.settings.subsTitle}>

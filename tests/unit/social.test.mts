@@ -35,6 +35,9 @@ ok("instagram max 10", postWarnings({ ...base, channels: ["instagram"] }, Array(
 ok("past date warned", postWarnings({ ...base, scheduled_at: "2020-01-01T00:00:00Z" }, []).some((w) => w.kind === "inPast"));
 ok("published in the past is fine", postWarnings({ ...base, status: "published", scheduled_at: "2020-01-01T00:00:00Z" }, []).length === 0);
 
+ok("facebook video goes alone", postWarnings({ ...base }, [{ mime_type: "video/mp4" }, { mime_type: "image/jpeg" }]).some((w) => w.kind === "facebookVideoAlone"));
+ok("facebook single video fine", postWarnings({ ...base }, [{ mime_type: "video/mp4" }]).length === 0);
+
 // storage path
 const path = mediaPathFor("p1", "Fotó final (1).JPG");
 ok("path inside post folder, safe name", path.startsWith("p1/") && path.endsWith("/Foto_final_1_.JPG"));
